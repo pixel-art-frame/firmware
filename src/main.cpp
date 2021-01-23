@@ -1,11 +1,10 @@
 #include <Arduino.h>
 #include <WiFiManager.h>
-#include "FS.h"
-#include "SD.h"
-#include "SPI.h"
+#include <FS.h>
+#include <SD.h>
+#include <SPI.h>
 
-#define DEBUG true
-
+#include "Global.h"
 #include "MatrixGif.hpp"
 #include "WebServer.hpp"
 
@@ -33,6 +32,7 @@ bool rootOpen = false;
 unsigned long gifStart = 0;
 int minPlaytime = 4000;
 char *gifDir = "/gifs";
+
 void setup()
 {
   Serial.begin(115200);
@@ -92,7 +92,7 @@ void playGif()
   }
 
   currentGif.close();
-  currentGif = root.openNextFile();
+  currentGif = root.openNextFile();  
 
   if (!currentGif)
   {

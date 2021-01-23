@@ -3,6 +3,9 @@
 #include <ESP32-VirtualMatrixPanel-I2S-DMA.h>
 #include <AnimatedGIF.h>
 #include <SD.h>
+
+#include "Global.h"
+
 #define FILESYSTEM SD
 
 unsigned long start_tick = 0;
@@ -10,6 +13,7 @@ VirtualMatrixPanel *matrixGifPanel;
 AnimatedGIF animGif;
 File f;
 int x_offset, y_offset;
+bool interruptGif = false;
 
 // Draw a line of image directly on the LED Matrix
 void GIFDraw(GIFDRAW *pDraw)
@@ -151,7 +155,8 @@ void ShowGIF(char *name)
     if (y_offset < 0) y_offset = 0;
    // Serial.printf("Successfully opened GIF; Canvas size = %d x %d\n", animGif.getCanvasWidth(), animGif.getCanvasHeight());
   // Serial.flush();
-    while (animGif.playFrame(true, NULL)) {}
+    while (animGif.playFrame(true, NULL) && !interruptGif) {}
+    interruptGif = false;
     animGif.close();
   }
 
