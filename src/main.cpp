@@ -1,6 +1,20 @@
 #include <Arduino.h>
+#include <WiFiManager.h>
+#include "FS.h"
+#include "SD.h"
+#include "SPI.h"
+
+#define DEBUG true
 
 #include "MatrixGif.hpp"
+#include "WebServer.hpp"
+
+#define SCK 33
+#define MISO 32
+#define MOSI 21
+#define CS 22
+
+WiFiManager wifiManager;
 
 // Config for 2 64x32 panels chained in a stacked config.
 // Change MATRIX_WIDTH to 128 in ESP32-HUB75-MatrixPanel-I2S-DMA.h
@@ -12,63 +26,82 @@
 
 MatrixPanel_I2S_DMA dma_display;
 VirtualMatrixPanel virtualDisp(dma_display, NUM_ROWS, NUM_COLS, PANEL_RES_X, PANEL_RES_Y, true);
+SPIClass sd_spi(HSPI);
 
+File root, currentGif;
+bool rootOpen = false;
+unsigned long gifStart = 0;
+int minPlaytime = 4000;
+char *gifDir = "/gifs";
 void setup()
 {
   Serial.begin(115200);
   Serial.println("Starting Pixel Art Frame");
 
-  dma_display.setPanelBrightness(64);
+  Serial.println("Init SD");
+  sd_spi.begin(SCK, MISO, MOSI, CS);
+
+  if (!SD.begin(CS, sd_spi))
+  {
+    Serial.println("Failed to open SD card");
+    // TODO: Message on display
+  }
+
+  wifiManager.autoConnect("Pixel Art Frame", "Pixels");
+  initServer();
+
+  dma_display.setPanelBrightness(10);
   dma_display.setMinRefreshRate(200);
 
   dma_display.begin(R1_PIN_DEFAULT, G1_PIN_DEFAULT, B1_PIN_DEFAULT, R2_PIN_DEFAULT, G2_PIN_DEFAULT, B2_PIN_DEFAULT, A_PIN_DEFAULT, B_PIN_DEFAULT, C_PIN_DEFAULT, D_PIN_DEFAULT, E_PIN_DEFAULT, LAT_PIN_DEFAULT, OE_PIN_DEFAULT, CLK_PIN_DEFAULT, FM6126A);
 
   virtualDisp.fillScreen(dma_display.color565(0, 0, 0));
 
-  Serial.println(" * Loading SPIFFS");
-  if (!SPIFFS.begin())
-  {
-    Serial.println("SPIFFS Mount Failed");
-    // TODO: Error on display
-  }
-
   InitMatrixGif(&virtualDisp);
 }
 
-char gifName[256];
-
 void playGif()
 {
-  char *gifDir = "/"; // play all GIFs in this directory on the SD card/SPIFFS
-  File root, temp; // TODO: Extract root and temp to global vars
+  if (!rootOpen)
+  {
+    Serial.println("opening root");
+    root = SD.open(gifDir);
+    currentGif = root.openNextFile();
+    rootOpen = true;
+  }
 
-  root = FILESYSTEM.open(gifDir);
   if (!root)
   {
-    Serial.printf("Failed to open GIF directory");
-    // TODO: Message on display
+    // TODO: Show error on display
+    Serial.println("Failed to open root");
     return;
   }
 
-  temp = root.openNextFile();
-  while (temp)
+  while (currentGif.isDirectory())
   {
-    if (temp.isDirectory())
-    {
-      temp.close();
-      temp = root.openNextFile();
-    }
-
-    strcpy(gifName, temp.name());
-
-    Serial.printf("Playing %s\n", temp.name());
-    Serial.flush();
-    ShowGIF((char *)temp.name());
+    currentGif.close();
+    currentGif = root.openNextFile();
   }
-  root.close();
+
+  Serial.println(currentGif.name());
+  gifStart = millis();
+
+  while (millis() - gifStart < minPlaytime)
+  {
+    ShowGIF((char *)currentGif.name());
+  }
+
+  currentGif.close();
+  currentGif = root.openNextFile();
+
+  if (!currentGif)
+  {
+    root.close();
+    rootOpen = false;
+  }
 }
 
 void loop()
 {
-  // put your main code here, to run repeatedly:
+  playGif();
 }

@@ -1,12 +1,13 @@
-#define FILESYSTEM SPIFFS
 
-#include <AnimatedGIF.h>
-#include <SPIFFS.h>
+
 #include <ESP32-VirtualMatrixPanel-I2S-DMA.h>
+#include <AnimatedGIF.h>
+#include <SD.h>
+#define FILESYSTEM SD
 
 unsigned long start_tick = 0;
 VirtualMatrixPanel *matrixGifPanel;
-AnimatedGIF gif;
+AnimatedGIF animGif;
 File f;
 int x_offset, y_offset;
 
@@ -105,7 +106,7 @@ void * GIFOpenFile(const char *fname, int32_t *pSize)
     return (void *)&f;
   }
   return NULL;
-} /* GIFOpenFile() */
+} /* GIFOpenFile() */ 
 
 void GIFCloseFile(void *pHandle)
 {
@@ -131,34 +132,27 @@ int32_t GIFReadFile(GIFFILE *pFile, uint8_t *pBuf, int32_t iLen)
 
 int32_t GIFSeekFile(GIFFILE *pFile, int32_t iPosition)
 { 
-  int i = micros();
+//  int i = micros();
   File *f = static_cast<File *>(pFile->fHandle);
   f->seek(iPosition);
   pFile->iPos = (int32_t)f->position();
-  i = micros() - i;
-  Serial.printf("Seek time = %d us\n", i);
+ // i = micros() - i;
+  //Serial.printf("Seek time = %d us\n", i);
   return pFile->iPos;
 } /* GIFSeekFile() */
 
 void ShowGIF(char *name)
 {
-  start_tick = millis();
-   
-  if (gif.open(name, GIFOpenFile, GIFCloseFile, GIFReadFile, GIFSeekFile, GIFDraw))
+  if (animGif.open(name, GIFOpenFile, GIFCloseFile, GIFReadFile, GIFSeekFile, GIFDraw))
   {
-    x_offset = (MATRIX_WIDTH - gif.getCanvasWidth())/2;
+    x_offset = (MATRIX_WIDTH - animGif.getCanvasWidth())/2;
     if (x_offset < 0) x_offset = 0;
-    y_offset = (MATRIX_HEIGHT - gif.getCanvasHeight())/2;
+    y_offset = (MATRIX_HEIGHT - animGif.getCanvasHeight())/2;
     if (y_offset < 0) y_offset = 0;
-    Serial.printf("Successfully opened GIF; Canvas size = %d x %d\n", gif.getCanvasWidth(), gif.getCanvasHeight());
-    Serial.flush();
-    while (gif.playFrame(true, NULL))
-    {      
-      if ( (millis() - start_tick) > 8000) { // we'll get bored after about 8 seconds of the same looping gif
-        break;
-      }
-    }
-    gif.close();
+   // Serial.printf("Successfully opened GIF; Canvas size = %d x %d\n", animGif.getCanvasWidth(), animGif.getCanvasHeight());
+  // Serial.flush();
+    while (animGif.playFrame(true, NULL)) {}
+    animGif.close();
   }
 
 } /* ShowGIF() */
@@ -166,5 +160,5 @@ void ShowGIF(char *name)
 void InitMatrixGif(VirtualMatrixPanel *panel)
 {
   matrixGifPanel = panel;
-  gif.begin(LITTLE_ENDIAN_PIXELS);
+  animGif.begin(LITTLE_ENDIAN_PIXELS);
 }
