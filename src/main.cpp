@@ -7,6 +7,7 @@
 #include "Global.h"
 #include "MatrixGif.hpp"
 #include "WebServer.hpp"
+#include "Gifplayer.hpp"
 
 #define SCK 33
 #define MISO 32
@@ -27,11 +28,7 @@ MatrixPanel_I2S_DMA dma_display;
 VirtualMatrixPanel virtualDisp(dma_display, NUM_ROWS, NUM_COLS, PANEL_RES_X, PANEL_RES_Y, true);
 SPIClass sd_spi(HSPI);
 
-File root, currentGif;
-bool rootOpen = false;
-unsigned long gifStart = 0;
-int minPlaytime = 4000;
-char *gifDir = "/gifs";
+
 
 void setup()
 {
@@ -58,50 +55,13 @@ void setup()
   virtualDisp.fillScreen(dma_display.color565(0, 0, 0));
 
   InitMatrixGif(&virtualDisp);
+
+  
 }
 
-void playGif()
-{
-  if (!rootOpen)
-  {
-    Serial.println("opening root");
-    root = SD.open(gifDir);
-    currentGif = root.openNextFile();
-    rootOpen = true;
-  }
-
-  if (!root)
-  {
-    // TODO: Show error on display
-    Serial.println("Failed to open root");
-    return;
-  }
-
-  while (currentGif.isDirectory())
-  {
-    currentGif.close();
-    currentGif = root.openNextFile();
-  }
-
-  Serial.println(currentGif.name());
-  gifStart = millis();
-
-  while (millis() - gifStart < minPlaytime)
-  {
-    ShowGIF((char *)currentGif.name());
-  }
-
-  currentGif.close();
-  currentGif = root.openNextFile();  
-
-  if (!currentGif)
-  {
-    root.close();
-    rootOpen = false;
-  }
-}
 
 void loop()
 {
   playGif();
+  
 }

@@ -3,6 +3,7 @@
 #include <ESPAsyncWebServer.h>
 #include <SD.h>
 #include "Global.h"
+#include "GifPlayer.hpp"
 
 AsyncWebServer *server;
 
@@ -18,38 +19,6 @@ String humanReadableSize(const size_t bytes)
         return String(bytes / 1024.0 / 1024.0) + " MB";
     else
         return String(bytes / 1024.0 / 1024.0 / 1024.0) + " GB";
-}
-
-// handles uploads, source: somewhere on github
-void handleUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
-{
-    String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
-    Serial.println(logmessage);
-
-    if (!index)
-    {
-        logmessage = "Upload Start: " + String(filename);
-        // open the file on first call and store the file handle in the request object
-        request->_tempFile = SD.open("/" + filename, "w");
-        Serial.println(logmessage);
-    }
-
-    if (len)
-    {
-        // stream the incoming chunk to the opened file
-        request->_tempFile.write(data, len);
-        logmessage = "Writing file: " + String(filename) + " index=" + String(index) + " len=" + String(len);
-        Serial.println(logmessage);
-    }
-
-    if (final)
-    {
-        logmessage = "Upload Complete: " + String(filename) + ",size: " + String(index + len);
-        // close the file handle as the upload is now done
-        request->_tempFile.close();
-        Serial.println(logmessage);
-        request->redirect("/");
-    }
 }
 
 void handleBrightness(AsyncWebServerRequest *request)
@@ -78,6 +47,92 @@ void handleBrightness(AsyncWebServerRequest *request)
     request->send(200);
 }
 
+void listFiles(AsyncWebServerRequest *request)
+{
+    String jsonResponse = "{[";
+
+    for (auto &gif : gifs)
+    {
+        jsonResponse += "\"" + gif + "\",";
+    }
+
+    request->send(200, "application/json", jsonResponse.substring(0, jsonResponse.length() - 1) + "]}");
+}
+
+// handles uploads, source: https://github.com/smford/esp32-asyncwebserver-fileupload-example
+void handleUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
+{
+    String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
+    Serial.println(logmessage);
+
+    if (!index)
+    {
+        logmessage = "Upload Start: " + String(filename);
+        // open the file on first call and store the file handle in the request object
+        request->_tempFile = SD.open("/" + filename, "w");
+        Serial.println(logmessage);
+    }
+
+    if (len)
+    {
+        // stream the incoming chunk to the opened file
+        request->_tempFile.write(data, len);
+        logmessage = "Writing file: " + String(filename) + " index=" + String(index) + " len=" + String(len);
+        Serial.println(logmessage);
+    }
+
+    if (final)
+    {
+        logmessage = "Upload Complete: " + String(filename) + ",size: " + String(index + len);
+        // close the file handle as the upload is now done
+        request->_tempFile.close();
+        Serial.println(logmessage);
+        request->redirect("/");
+
+        gifsLoaded = false;
+    }
+}
+
+void handleFile(AsyncWebServerRequest *request)
+{
+    if (!request->hasParam("name"))
+    {
+        request->send(400, "text/plain", "Missing parameter: name");
+        return;
+    }
+
+    const char *fileName = request->getParam("name")->value().c_str();
+
+    if (!SD.exists(fileName))
+    {
+        request->send(400, "text/plain", "File does not exist");
+        return;
+    }
+
+    request->send(SD, fileName, "application/octet-stream");
+}
+
+void deleteFile(AsyncWebServerRequest *request)
+{
+    if (!request->hasParam("name"))
+    {
+        request->send(400, "text/plain", "Missing parameter: name");
+        return;
+    }
+
+    const char *fileName = request->getParam("name")->value().c_str();
+
+    if (!SD.exists(fileName))
+    {
+        request->send(400, "text/plain", "File does not exist");
+        return;
+    }
+
+    SD.remove(fileName);
+    gifsLoaded = false;
+    request->send(200, "text/plain", "Deleted File: " + String(fileName));
+}
+
 void configureWebServer()
 {
     server->on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -85,14 +140,29 @@ void configureWebServer()
     });
 
     server->on("/gif/name", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send_P(200, "text/html", currentGif.name());
+        request->send(200, "text/plain", String(getCurrentGif()));
+    });
+
+    server->on("/gif/next", HTTP_GET, [](AsyncWebServerRequest *request) {
+        nextGif();
+        request->send(200, "text/plain", String(getCurrentGif()));
+    });
+
+    server->on("/gif/prev", HTTP_GET, [](AsyncWebServerRequest *request) {
+        prevGif();
+        request->send(200, "text/plain", String(getCurrentGif()));
     });
 
     server->on("/panel/brightness", handleBrightness);
-
-    server->on("/upload", HTTP_POST, [](AsyncWebServerRequest *request) {
+    server->on("/files", listFiles);
+    server->on("/file/delete", deleteFile);
+    server->on("/file", handleFile);
+    
+    server->on(
+        "/upload", HTTP_POST, [](AsyncWebServerRequest *request) {
             request->send(200);
-        }, handleUpload);
+        },
+        handleUpload);
 }
 
 void initServer()

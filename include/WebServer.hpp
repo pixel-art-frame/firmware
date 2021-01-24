@@ -12,8 +12,8 @@ void configureWebServer();
 void handleUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final);
 
 String humanReadableSize(const size_t bytes);
-String processor(const String& var);
-String listFiles(bool ishtml = false);
+String listFiles();
+void handleBrightness(AsyncWebServerRequest *request);
 
 #endif
 

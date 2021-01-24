@@ -4,10 +4,8 @@
 #include <FS.h>
 #include <ESP32-VirtualMatrixPanel-I2S-DMA.h>
 
-extern File currentGif;
 extern MatrixPanel_I2S_DMA dma_display;
-extern bool interruptGif;
-
-
+extern bool interruptGif, gifsLoaded;
+extern std::vector<String> gifs;
 
 #endif
