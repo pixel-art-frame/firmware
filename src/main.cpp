@@ -6,8 +6,8 @@
 
 #include "Global.h"
 #include "MatrixGif.hpp"
-#include "WebServer.hpp"
 #include "Gifplayer.hpp"
+#include "WebServer.hpp"
 
 #define SCK 33
 #define MISO 32
@@ -28,7 +28,7 @@ MatrixPanel_I2S_DMA dma_display;
 VirtualMatrixPanel virtualDisp(dma_display, NUM_ROWS, NUM_COLS, PANEL_RES_X, PANEL_RES_Y, true);
 SPIClass sd_spi(HSPI);
 
-
+int brightness = 20;
 
 void setup()
 {
@@ -44,10 +44,10 @@ void setup()
     // TODO: Message on display
   }
 
-  wifiManager.autoConnect("Pixel Art Frame", "Pixels");
+  wifiManager.autoConnect("Pixel Art Frame", "PixelArt");
   initServer();
 
-  dma_display.setPanelBrightness(10);
+  dma_display.setPanelBrightness(brightness);
   dma_display.setMinRefreshRate(200);
 
   dma_display.begin(R1_PIN_DEFAULT, G1_PIN_DEFAULT, B1_PIN_DEFAULT, R2_PIN_DEFAULT, G2_PIN_DEFAULT, B2_PIN_DEFAULT, A_PIN_DEFAULT, B_PIN_DEFAULT, C_PIN_DEFAULT, D_PIN_DEFAULT, E_PIN_DEFAULT, LAT_PIN_DEFAULT, OE_PIN_DEFAULT, CLK_PIN_DEFAULT, FM6126A);
@@ -55,13 +55,11 @@ void setup()
   virtualDisp.fillScreen(dma_display.color565(0, 0, 0));
 
   InitMatrixGif(&virtualDisp);
-
-  
 }
 
 
 void loop()
 {
   playGif();
-  
+    
 }

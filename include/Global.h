@@ -7,5 +7,7 @@
 extern MatrixPanel_I2S_DMA dma_display;
 extern bool interruptGif, gifsLoaded;
 extern std::vector<String> gifs;
+extern int brightness;
+extern bool autoPlay;
 
 #endif

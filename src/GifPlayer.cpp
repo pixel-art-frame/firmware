@@ -4,7 +4,9 @@
 #include "Global.h"
 #include "MatrixGif.hpp"
 
-bool gifsLoaded = false;
+bool gifsLoaded = false,
+     autoPlay = true;
+
 unsigned long gifStart = 0;
 int minPlaytime = 4000;
 char *gifDir = "/gifs";
@@ -42,9 +44,9 @@ void loadGifs()
     gifsLoaded = true;
 }
 
-char* getCurrentGif()
+char *getCurrentGif()
 {
-    return (char*)gifs.at(currentGifIndex).c_str();
+    return (char *)gifs.at(currentGifIndex).c_str();
 }
 
 void nextGif()
@@ -53,7 +55,7 @@ void nextGif()
 
     currentGifIndex++;
 
-    if (currentGifIndex > (gifs.size()-1))
+    if (currentGifIndex > (gifs.size() - 1))
     {
         currentGifIndex = 0;
     }
@@ -73,17 +75,30 @@ void prevGif()
     {
         currentGifIndex = gifs.size() - 1;
     }
-    interruptGif = true;    
+    interruptGif = true;
+}
+
+void setGif(int index)
+{
+    if (index < 0 || index >= gifs.size())
+    {
+        return;
+    }
+    
+    gifStart = millis();
+    currentGifIndex = index;
+    interruptGif = true;
 }
 
 void playGif()
 {
-    if (!gifsLoaded) {
+    if (!gifsLoaded)
+    {
         loadGifs();
         gifsLoaded = true;
     }
 
-    if (millis() - gifStart > minPlaytime)
+    if (autoPlay && millis() - gifStart > minPlaytime)
     {
         nextGif();
     }

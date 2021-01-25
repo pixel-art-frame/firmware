@@ -6,5 +6,6 @@ char* getCurrentGif();
 void playGif();
 void nextGif();
 void prevGif();
+void setGif(int index);
 
 #endif

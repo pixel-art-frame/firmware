@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"typeinfo": "cpp",
+			"functional": "cpp"
+		}
+	}
+}

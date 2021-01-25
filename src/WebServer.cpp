@@ -39,24 +39,65 @@ void handleBrightness(AsyncWebServerRequest *request)
         return;
     }
 
-    dma_display.setPanelBrightness(value);
+    brightness = value;
+    dma_display.setPanelBrightness(brightness);
     interruptGif = true;
 
     // TODO: Show light bulb icon on matrix
 
-    request->send(200);
+    request->send(200, "text/plain", String(brightness));
+}
+
+void handleAutoplay(AsyncWebServerRequest *request)
+{
+    if (!request->hasParam("value"))
+    {
+        request->send(400, "text/plain", "Missing parameter: state");
+        return;
+    }
+
+    autoPlay = strcmp(request->getParam("value")->value().c_str(), "1") == 0;
+
+    request->send(200, "text/plain", autoPlay ? "1" : "0");
+}
+
+void handlePlayGif(AsyncWebServerRequest *request)
+{
+    if (!request->hasParam("name"))
+    {
+        request->send(400, "text/plain", "Missing parameter: name");
+        return;
+    }
+
+    const char *fileName = request->getParam("name")->value().c_str();
+
+    if (!SD.exists(fileName))
+    {
+        request->send(400, "text/plain", "File does not exist");
+        return;
+    }
+    
+    for (int i = 0; i < gifs.size(); i++) {
+        if (strcmp(gifs[i].c_str(), fileName) == 0) {
+            setGif(i);
+            request->send(200, "text/plain", String(fileName));
+            return;
+        }
+    }
+
+    request->send(400, "text/plain", "File not found");
 }
 
 void listFiles(AsyncWebServerRequest *request)
 {
-    String jsonResponse = "{[";
+    String jsonResponse = "[";
 
     for (auto &gif : gifs)
     {
         jsonResponse += "\"" + gif + "\",";
     }
 
-    request->send(200, "application/json", jsonResponse.substring(0, jsonResponse.length() - 1) + "]}");
+    request->send(200, "application/json", jsonResponse.substring(0, jsonResponse.length() - 1) + "]");
 }
 
 // handles uploads, source: https://github.com/smford/esp32-asyncwebserver-fileupload-example
@@ -153,11 +194,22 @@ void configureWebServer()
         request->send(200, "text/plain", String(getCurrentGif()));
     });
 
-    server->on("/panel/brightness", handleBrightness);
+    server->on("/gif/autoplay", HTTP_POST, handleAutoplay);
+    server->on("/gif/autoplay", HTTP_GET, [](AsyncWebServerRequest *request) {
+        request->send(200, "text/plain", autoPlay ? "1" : "0");
+    });
+
+    server->on("/gif", HTTP_POST, handlePlayGif);
+
+    server->on("/panel/brightness", HTTP_POST, handleBrightness);
+    server->on("/panel/brightness", HTTP_GET, [](AsyncWebServerRequest *request) {
+        request->send(200, "text/plain", String(brightness));
+    });
+
     server->on("/files", listFiles);
     server->on("/file/delete", deleteFile);
     server->on("/file", handleFile);
-    
+
     server->on(
         "/upload", HTTP_POST, [](AsyncWebServerRequest *request) {
             request->send(200);
@@ -170,7 +222,5 @@ void initServer()
     server = new AsyncWebServer(80);
     configureWebServer();
 
-    // startup web server
-    Serial.println("Starting Webserver ...");
     server->begin();
 }
