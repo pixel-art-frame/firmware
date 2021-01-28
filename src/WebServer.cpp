@@ -110,7 +110,7 @@ void handleUpload(AsyncWebServerRequest *request, String filename, size_t index,
     {
         logmessage = "Upload Start: " + String(filename);
         // open the file on first call and store the file handle in the request object
-        request->_tempFile = SD.open("/" + filename, "w");
+        request->_tempFile = SD.open("/gifs/" + filename, "w");
         Serial.println(logmessage);
     }
 
