@@ -4,6 +4,7 @@
 #include <SD.h>
 #include "Global.h"
 #include "GifPlayer.hpp"
+#include "Configuration.hpp"
 
 AsyncWebServer *server;
 
@@ -39,13 +40,14 @@ void handleBrightness(AsyncWebServerRequest *request)
         return;
     }
 
-    brightness = value;
-    dma_display.setPanelBrightness(brightness);
+    config.brightness = value;
+    saveSettings(config);
+    dma_display.setPanelBrightness(config.brightness);
     interruptGif = true;
 
     // TODO: Show light bulb icon on matrix
 
-    request->send(200, "text/plain", String(brightness));
+    request->send(200, "text/plain", String(config.brightness));
 }
 
 void handleAutoplay(AsyncWebServerRequest *request)
@@ -203,7 +205,7 @@ void configureWebServer()
 
     server->on("/panel/brightness", HTTP_POST, handleBrightness);
     server->on("/panel/brightness", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(200, "text/plain", String(brightness));
+        request->send(200, "text/plain", String(config.brightness)); // TODO: Return whole config here
     });
 
     server->on("/files", listFiles);

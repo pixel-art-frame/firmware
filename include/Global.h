@@ -3,10 +3,15 @@
 
 #include <FS.h>
 #include <ESP32-VirtualMatrixPanel-I2S-DMA.h>
+#include "Configuration.hpp"
+
+extern Config config;
 
 extern MatrixPanel_I2S_DMA dma_display;
+
 extern bool interruptGif, gifsLoaded;
 extern std::vector<String> gifs;
+
 extern int brightness;
 extern bool autoPlay;
 
