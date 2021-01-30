@@ -9,6 +9,7 @@
 #include "MatrixGif.hpp"
 #include "Gifplayer.hpp"
 #include "WebServer.hpp"
+#include "Wifi.hpp"
 
 #define SCK 33
 #define MISO 32
@@ -43,6 +44,8 @@ void setup()
   Serial.println("Loading configuration");
   loadSettings();
 
+  setupWifi();
+
   Serial.println("Init SD");
   sd_spi.begin(SCK, MISO, MOSI, CS);
 
@@ -55,7 +58,6 @@ void setup()
   if (!SPIFFS.begin())
   {
     Serial.println("An Error has occurred while mounting SPIFFS");
-    return;
   }
 
   initServer();
@@ -72,5 +74,10 @@ void setup()
 
 void loop()
 {
-  playGif();
+  //playGif();
+
+  if (config.wifiMode == WIFI_AP_STA) {
+    handleDns();
+  }
+
 }

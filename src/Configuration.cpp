@@ -5,6 +5,8 @@
 
 #define BRIGHTNESS_KEY "brightness"
 #define AUTOPLAY_KEY "autoplay"
+#define SSID_KEY "ssid"
+#define PASS_KEY "pass"
 
 void loadSettings()
 {
@@ -20,10 +22,8 @@ void loadSettings()
 
   config.brightness = doc[BRIGHTNESS_KEY] | 20;
   config.autoPlay = doc[AUTOPLAY_KEY] | true;
-  // For strings:
-  // strlcpy(config.hostname,                  // <- destination
-  //         doc["hostname"] | "example.com",  // <- source
-  //         sizeof(config.hostname));         // <- destination's capacity
+  config.ssid = String(doc["ssid"] | "");
+  config.pass = String(doc["pass"] | "");
 
   configFile.close();
 }
