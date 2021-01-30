@@ -17,6 +17,6 @@ struct Config
 };
 
 void loadSettings();
-void saveSettings(const Config &config);
+void saveSettings();
 
 #endif

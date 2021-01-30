@@ -1,6 +1,8 @@
 #include <WiFi.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
+#include <AsyncJson.h>
+#include <ArduinoJson.h>
 #include <SD.h>
 #include "Global.h"
 #include "GifPlayer.hpp"
@@ -22,6 +24,23 @@ String humanReadableSize(const size_t bytes)
         return String(bytes / 1024.0 / 1024.0 / 1024.0) + " GB";
 }
 
+void handleWifiConfig(AsyncWebServerRequest *request)
+{
+    Serial.println("Wifi config");
+
+    if (!request->hasParam("ssid") || !request->hasParam("pass"))
+    {
+        request->send(400, "text/plain", "Missing parameter(s): ssid, value");
+        return;
+    }
+
+    config.ssid = request->getParam("ssid")->value();
+    config.pass = request->getParam("pass")->value();
+    saveSettings();
+    
+    request->send(200, "text/plain", "Restart to apply changes");
+}
+
 void handleBrightness(AsyncWebServerRequest *request)
 {
     Serial.println("set panel brightness");
@@ -41,7 +60,7 @@ void handleBrightness(AsyncWebServerRequest *request)
     }
 
     config.brightness = value;
-    saveSettings(config);
+    saveSettings();
     dma_display.setPanelBrightness(config.brightness);
     interruptGif = true;
 
@@ -217,6 +236,13 @@ void configureWebServer()
             request->send(200);
         },
         handleUpload);
+
+
+    server->on("/config/wifi", HTTP_POST, handleWifiConfig);
+    server->on("/restart", HTTP_GET, [](AsyncWebServerRequest *request) {
+        request->send(200);
+        ESP.restart();
+    });
 }
 
 void initServer()

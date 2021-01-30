@@ -22,18 +22,20 @@ void loadSettings()
 
   config.brightness = doc[BRIGHTNESS_KEY] | 20;
   config.autoPlay = doc[AUTOPLAY_KEY] | true;
-  config.ssid = String(doc["ssid"] | "");
-  config.pass = String(doc["pass"] | "");
+  config.ssid = String(doc[SSID_KEY] | "");
+  config.pass = String(doc[PASS_KEY] | "");
 
   configFile.close();
 }
 
-void saveSettings(const Config &config)
+void saveSettings()
 {
   StaticJsonDocument<CONFIG_SIZE> doc;
 
   doc[BRIGHTNESS_KEY] = config.brightness;
   doc[AUTOPLAY_KEY] = config.autoPlay;
+  doc[SSID_KEY] = config.ssid;
+  doc[PASS_KEY] = config.pass;
 
   SPIFFS.remove(CONFIG_FILENAME);
   File configFile = SPIFFS.open(CONFIG_FILENAME, FILE_WRITE);
