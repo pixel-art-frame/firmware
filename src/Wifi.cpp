@@ -1,12 +1,16 @@
 #include "WiFi.hpp"
 #include "Global.h"
+#include "MatrixGif.hpp"
 #include <WiFi.h>
 #include <DNSServer.h>
 
+#define CONN_GIF "/wifi_connecting.gif"
+
 const byte DNS_PORT = 53;
 DNSServer dnsServer;
-
 IPAddress apIP(192, 168, 4, 1);
+
+unsigned long connect_start = 0;
 
 /**
  * If there are AP credentials stored try to connect
@@ -41,12 +45,24 @@ void connect()
 {
     WiFi.begin(config.ssid.c_str(), config.pass.c_str());
 
-    while (WiFi.status() != WL_CONNECTED)
-    {
-        delay(500);
-        Serial.println("Connecting to WiFi..");
+    frame_state = CONNECT_WIFI;
+    connect_start = millis();
+}
+
+void connecting()
+{
+    if (WiFi.status() == WL_CONNECTED) { // Successfully connected
+        frame_state = PLAYING_ART;
+        return;
     }
-    Serial.println("Connected to the WiFi network");
+    
+    Serial.println("Playing wifi_connecting GIF");
+    ShowGIF(CONN_GIF, true);
+
+    if (millis() - connect_start  > 10000) {
+      frame_state = PLAYING_ART;
+      createAP();      
+    }
 }
 
 void handleDns()

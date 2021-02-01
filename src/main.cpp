@@ -29,7 +29,21 @@ VirtualMatrixPanel virtualDisp(dma_display, NUM_ROWS, NUM_COLS, PANEL_RES_X, PAN
 
 SPIClass sd_spi(HSPI);
 
+frame_status_t frame_state = PLAYING_ART;
+unsigned long lastStateChange = 0;
+
 Config config;
+
+
+void handleBrightness()
+{
+  ShowGIF("/bulb.gif", true);
+
+  if (millis() - lastStateChange > 5000) {
+    frame_state = PLAYING_ART;
+  }
+
+}
 
 void setup()
 {
@@ -43,8 +57,6 @@ void setup()
 
   Serial.println("Loading configuration");
   loadSettings();
-
-  setupWifi();
 
   Serial.println("Init SD");
   sd_spi.begin(SCK, MISO, MOSI, CS);
@@ -60,7 +72,6 @@ void setup()
     Serial.println("An Error has occurred while mounting SPIFFS");
   }
 
-  initServer();
 
   dma_display.setPanelBrightness(config.brightness);
   dma_display.setMinRefreshRate(200);
@@ -70,14 +81,43 @@ void setup()
   virtualDisp.fillScreen(dma_display.color565(0, 0, 0));
 
   InitMatrixGif(&virtualDisp);
+
+  File root = SPIFFS.open("/");
+  File tmp = root.openNextFile();
+  
+  setupWifi();
+
+  initServer();
 }
+
+frame_status_t lastState = frame_state;
 
 void loop()
 {
-  //playGif();
+  if (lastState != frame_state) {
+    lastState = frame_state;
 
-  if (config.wifiMode == WIFI_AP_STA) {
-    handleDns();
+    Serial.print("Changed state to: ");
+    Serial.println(frame_state);
+    lastStateChange = millis();
   }
 
+  if (frame_state == PLAYING_ART)
+  {
+    playGif();
+  }
+
+  if (frame_state == CONNECT_WIFI)
+  {
+    connecting();
+  }
+
+  if (frame_state == ADJ_BRIGHTNESS) {
+    handleBrightness();
+  }
+
+  if (config.wifiMode == WIFI_AP_STA)
+  {
+    handleDns();
+  }
 }

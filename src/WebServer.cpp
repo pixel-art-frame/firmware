@@ -4,9 +4,25 @@
 #include <AsyncJson.h>
 #include <ArduinoJson.h>
 #include <SD.h>
+#include <SPIFFS.h>
 #include "Global.h"
 #include "GifPlayer.hpp"
 #include "Configuration.hpp"
+
+const char default_index[] PROGMEM = R"rawliteral(
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+</head>
+<body>
+  <p><h1>Files missing!</h1></p>
+  <form method="POST" action="/spiffs/upload" enctype="multipart/form-data"><input type="file" name="data"/><input type="submit" name="upload" value="Upload" title="Upload File"></form>
+  <p>Please re-upload the required files</p>
+</body>
+</html>
+)rawliteral";
 
 AsyncWebServer *server;
 
@@ -37,7 +53,7 @@ void handleWifiConfig(AsyncWebServerRequest *request)
     config.ssid = request->getParam("ssid")->value();
     config.pass = request->getParam("pass")->value();
     saveSettings();
-    
+
     request->send(200, "text/plain", "Restart to apply changes");
 }
 
@@ -64,7 +80,7 @@ void handleBrightness(AsyncWebServerRequest *request)
     dma_display.setPanelBrightness(config.brightness);
     interruptGif = true;
 
-    // TODO: Show light bulb icon on matrix
+    frame_state = ADJ_BRIGHTNESS;
 
     request->send(200, "text/plain", String(config.brightness));
 }
@@ -97,9 +113,11 @@ void handlePlayGif(AsyncWebServerRequest *request)
         request->send(400, "text/plain", "File does not exist");
         return;
     }
-    
-    for (int i = 0; i < gifs.size(); i++) {
-        if (strcmp(gifs[i].c_str(), fileName) == 0) {
+
+    for (int i = 0; i < gifs.size(); i++)
+    {
+        if (strcmp(gifs[i].c_str(), fileName) == 0)
+        {
             setGif(i);
             request->send(200, "text/plain", String(fileName));
             return;
@@ -132,6 +150,39 @@ void handleUpload(AsyncWebServerRequest *request, String filename, size_t index,
         logmessage = "Upload Start: " + String(filename);
         // open the file on first call and store the file handle in the request object
         request->_tempFile = SD.open("/gifs/" + filename, "w");
+        Serial.println(logmessage);
+    }
+
+    if (len)
+    {
+        // stream the incoming chunk to the opened file
+        request->_tempFile.write(data, len);
+        logmessage = "Writing file: " + String(filename) + " index=" + String(index) + " len=" + String(len);
+        Serial.println(logmessage);
+    }
+
+    if (final)
+    {
+        logmessage = "Upload Complete: " + String(filename) + ",size: " + String(index + len);
+        // close the file handle as the upload is now done
+        request->_tempFile.close();
+        Serial.println(logmessage);
+        request->redirect("/");
+
+        gifsLoaded = false;
+    }
+}
+
+void handleSpiffsUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
+{
+    String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
+    Serial.println(logmessage);
+
+    if (!index)
+    {
+        logmessage = "Upload Start: " + String(filename);
+        // open the file on first call and store the file handle in the request object
+        request->_tempFile = SPIFFS.open(filename, "w");
         Serial.println(logmessage);
     }
 
@@ -198,7 +249,13 @@ void deleteFile(AsyncWebServerRequest *request)
 void configureWebServer()
 {
     server->on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(200, "text/html", "<h1>TODO: Return webpage here</h1>");
+        if (!SPIFFS.exists("index.html"))
+        {
+            request->send_P(200, "text/html", default_index);
+            return;
+        }
+
+        request->send(SPIFFS, "index.html");
     });
 
     server->on("/gif/name", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -237,6 +294,11 @@ void configureWebServer()
         },
         handleUpload);
 
+    server->on(
+        "/spiffs/upload", HTTP_POST, [](AsyncWebServerRequest *request) {
+            request->send(200);
+        },
+        handleSpiffsUpload);
 
     server->on("/config/wifi", HTTP_POST, handleWifiConfig);
     server->on("/restart", HTTP_GET, [](AsyncWebServerRequest *request) {

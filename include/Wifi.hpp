@@ -7,5 +7,6 @@ void createAP();
 void handleDns();
 
 void connect();
+void connecting();
 
 #endif

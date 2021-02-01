@@ -37,7 +37,11 @@ void saveSettings()
   doc[SSID_KEY] = config.ssid;
   doc[PASS_KEY] = config.pass;
 
-  SPIFFS.remove(CONFIG_FILENAME);
+  if (SPIFFS.exists(CONFIG_FILENAME))
+  {
+    SPIFFS.remove(CONFIG_FILENAME);
+  }
+
   File configFile = SPIFFS.open(CONFIG_FILENAME, FILE_WRITE);
 
   if (!configFile)
