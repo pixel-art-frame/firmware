@@ -40,6 +40,46 @@ String humanReadableSize(const size_t bytes)
         return String(bytes / 1024.0 / 1024.0 / 1024.0) + " GB";
 }
 
+String translateEncryptionType(wifi_auth_mode_t encryptionType)
+{
+    switch (encryptionType)
+    {
+    case (0):
+        return "Open";
+    case (1):
+        return "WEP";
+    case (2):
+        return "WPA_PSK";
+    case (3):
+        return "WPA2_PSK";
+    case (4):
+        return "WPA_WPA2_PSK";
+    case (5):
+        return "WPA2_ENTERPRISE";
+    default:
+        return "UNKOWN";
+    }
+}
+
+void handleScanWifi(AsyncWebServerRequest *request)
+{
+    int16_t n = WiFi.scanNetworks();
+
+    String jsonResponse = "[";
+
+    for (int i = 0; i < n; i++)
+    {
+        jsonResponse += "{\"ssid\": \"" + WiFi.SSID(i) + "\", \"rssi\": \"" + WiFi.RSSI(i) + "\", \"auth\": \"" + translateEncryptionType(WiFi.encryptionType(i)) + "\"}";
+
+        if (i < (n - 1))
+            jsonResponse += ",";
+    }
+
+    jsonResponse += "]";
+
+    request->send(200, "application/json", jsonResponse);
+}
+
 void handleWifiConfig(AsyncWebServerRequest *request)
 {
     Serial.println("Wifi config");
@@ -301,6 +341,9 @@ void configureWebServer()
         handleSpiffsUpload);
 
     server->on("/config/wifi", HTTP_POST, handleWifiConfig);
+
+    server->on("/wifi/scan", HTTP_GET, handleScanWifi);
+
     server->on("/restart", HTTP_GET, [](AsyncWebServerRequest *request) {
         request->send(200);
         ESP.restart();
