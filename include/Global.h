@@ -10,13 +10,17 @@ typedef enum {
     OFF = 0, // LED matrix is off
     PLAYING_ART, // Looping trough art
     SHOW_TEXT,
+
     CONNECT_WIFI, // Connecting to WiFi
-    ADJ_BRIGHTNESS // Adjusting brightness
+    ADJ_BRIGHTNESS, // Adjusting brightness
+
+    OTA_UPDATE
 
 } frame_status_t;
 
 
 extern frame_status_t frame_state;
+extern frame_status_t target_state;
 extern unsigned long lastStateChange;
 
 extern Config config;

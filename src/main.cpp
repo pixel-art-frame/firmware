@@ -11,6 +11,7 @@
 #include "WebServer.hpp"
 #include "Wifi.hpp"
 #include "MatrixText.hpp"
+#include "OTA.h"
 
 #define SCK 33
 #define MISO 32
@@ -31,6 +32,8 @@ VirtualMatrixPanel virtualDisp(dma_display, NUM_ROWS, NUM_COLS, PANEL_RES_X, PAN
 SPIClass sd_spi(HSPI);
 
 frame_status_t frame_state = PLAYING_ART;
+frame_status_t target_state = PLAYING_ART;
+frame_status_t lastState = frame_state;
 unsigned long lastStateChange = 0;
 
 Config config;
@@ -90,10 +93,13 @@ void setup()
   initServer();
 }
 
-frame_status_t lastState = frame_state;
-
 void loop()
 {
+  if (target_state != frame_state)
+  {
+    frame_state = target_state;
+  }
+
   if (lastState != frame_state)
   {
     lastState = frame_state;
@@ -126,5 +132,10 @@ void loop()
   if (config.wifiMode == WIFI_AP_STA)
   {
     handleDns();
+  }
+
+  if (frame_state == OTA_UPDATE)
+  {
+    handleOTA();
   }
 }

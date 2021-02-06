@@ -304,9 +304,9 @@ void handleText(AsyncWebServerRequest *request)
     text.x = request->hasParam("x") ? atoi(request->getParam("x")->value().c_str()) : 4;
     text.y = request->hasParam("y") ? atoi(request->getParam("y")->value().c_str()) : 4;
 
-    text.wrap =  request->hasParam("wrap") ? request->getParam("wrap")->value() == "1" : true;
-    text.scroll =  request->hasParam("scroll") ? request->getParam("scroll")->value() == "1" : false;
-    text.clearScreen =  request->hasParam("clearScreen") ? request->getParam("clearScreen")->value() == "1" : true;
+    text.wrap = request->hasParam("wrap") ? request->getParam("wrap")->value() == "1" : true;
+    text.scroll = request->hasParam("scroll") ? request->getParam("scroll")->value() == "1" : false;
+    text.clearScreen = request->hasParam("clearScreen") ? request->getParam("clearScreen")->value() == "1" : true;
 
     text.speed = request->hasParam("speed") ? atoi(request->getParam("speed")->value().c_str()) : 4;
     text.delay = request->hasParam("delay") ? atoi(request->getParam("delay")->value().c_str()) : 5000;
@@ -377,6 +377,13 @@ void configureWebServer()
     server->on("/restart", HTTP_GET, [](AsyncWebServerRequest *request) {
         request->send(200);
         ESP.restart();
+    });
+
+    server->on("/ota", HTTP_GET, [](AsyncWebServerRequest *request) {
+        request->send(200, "text/plain", "Started OTA mode");
+
+        target_state = OTA_UPDATE;
+        interruptGif = true;
     });
 }
 
