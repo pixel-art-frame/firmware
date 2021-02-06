@@ -58,6 +58,7 @@ void nextGif()
     if (currentGifIndex > (gifs.size() - 1))
     {
         currentGifIndex = 0;
+        std::random_shuffle(gifs.begin(), gifs.end());
     }
 
     interruptGif = true;

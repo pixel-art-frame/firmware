@@ -8,6 +8,7 @@
 #include "Global.h"
 #include "GifPlayer.hpp"
 #include "Configuration.hpp"
+#include "MatrixText.hpp"
 
 const char default_index[] PROGMEM = R"rawliteral(
 <!DOCTYPE HTML>
@@ -286,6 +287,33 @@ void deleteFile(AsyncWebServerRequest *request)
     request->send(200, "text/plain", "Deleted File: " + String(fileName));
 }
 
+void handleText(AsyncWebServerRequest *request)
+{
+    if (!request->hasParam("text"))
+    {
+        request->send(400, "text/plain", "Missing parameter: text");
+        return;
+    }
+
+    interruptGif = true;
+
+    text.text = request->getParam("text")->value();
+    text.color = request->hasParam("color") ? atoi(request->getParam("color")->value().c_str()) : virtualDisp.color565(255, 0, 0);
+    text.size = request->hasParam("size") ? atoi(request->getParam("size")->value().c_str()) : 1;
+
+    text.x = request->hasParam("x") ? atoi(request->getParam("x")->value().c_str()) : 4;
+    text.y = request->hasParam("y") ? atoi(request->getParam("y")->value().c_str()) : 4;
+
+    text.wrap =  request->hasParam("wrap") ? request->getParam("wrap")->value() == "1" : true;
+    text.scroll =  request->hasParam("scroll") ? request->getParam("scroll")->value() == "1" : false;
+    text.clearScreen =  request->hasParam("clearScreen") ? request->getParam("clearScreen")->value() == "1" : true;
+
+    text.speed = request->hasParam("speed") ? atoi(request->getParam("speed")->value().c_str()) : 4;
+    text.delay = request->hasParam("delay") ? atoi(request->getParam("delay")->value().c_str()) : 5000;
+
+    frame_state = SHOW_TEXT;
+}
+
 void configureWebServer()
 {
     server->on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -318,6 +346,8 @@ void configureWebServer()
     });
 
     server->on("/gif", HTTP_POST, handlePlayGif);
+
+    server->on("/text", HTTP_POST, handleText);
 
     server->on("/panel/brightness", HTTP_POST, handleBrightness);
     server->on("/panel/brightness", HTTP_GET, [](AsyncWebServerRequest *request) {

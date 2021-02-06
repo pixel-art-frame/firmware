@@ -10,6 +10,7 @@
 #include "Gifplayer.hpp"
 #include "WebServer.hpp"
 #include "Wifi.hpp"
+#include "MatrixText.hpp"
 
 #define SCK 33
 #define MISO 32
@@ -34,15 +35,14 @@ unsigned long lastStateChange = 0;
 
 Config config;
 
-
 void handleBrightness()
 {
   ShowGIF("/bulb.gif", true);
 
-  if (millis() - lastStateChange > 5000) {
+  if (millis() - lastStateChange > 5000)
+  {
     frame_state = PLAYING_ART;
   }
-
 }
 
 void setup()
@@ -72,11 +72,11 @@ void setup()
     Serial.println("An Error has occurred while mounting SPIFFS");
   }
 
-
   dma_display.setPanelBrightness(config.brightness);
   dma_display.setMinRefreshRate(200);
 
-  dma_display.begin(R1_PIN_DEFAULT, G1_PIN_DEFAULT, B1_PIN_DEFAULT, R2_PIN_DEFAULT, G2_PIN_DEFAULT, B2_PIN_DEFAULT, A_PIN_DEFAULT, B_PIN_DEFAULT, C_PIN_DEFAULT, D_PIN_DEFAULT, E_PIN_DEFAULT, LAT_PIN_DEFAULT, OE_PIN_DEFAULT, CLK_PIN_DEFAULT, FM6126A);
+  //dma_display.begin(R1_PIN_DEFAULT, G1_PIN_DEFAULT, B1_PIN_DEFAULT, R2_PIN_DEFAULT, G2_PIN_DEFAULT, B2_PIN_DEFAULT, A_PIN_DEFAULT, B_PIN_DEFAULT, C_PIN_DEFAULT, D_PIN_DEFAULT, E_PIN_DEFAULT, LAT_PIN_DEFAULT, OE_PIN_DEFAULT, CLK_PIN_DEFAULT, FM6126A);
+  dma_display.begin();
 
   virtualDisp.fillScreen(dma_display.color565(0, 0, 0));
 
@@ -84,7 +84,7 @@ void setup()
 
   File root = SPIFFS.open("/");
   File tmp = root.openNextFile();
-  
+
   setupWifi();
 
   initServer();
@@ -94,7 +94,8 @@ frame_status_t lastState = frame_state;
 
 void loop()
 {
-  if (lastState != frame_state) {
+  if (lastState != frame_state)
+  {
     lastState = frame_state;
 
     Serial.print("Changed state to: ");
@@ -107,12 +108,18 @@ void loop()
     playGif();
   }
 
+  if (frame_state == SHOW_TEXT)
+  {
+    showText(text);
+  }
+
   if (frame_state == CONNECT_WIFI)
   {
     connecting();
   }
 
-  if (frame_state == ADJ_BRIGHTNESS) {
+  if (frame_state == ADJ_BRIGHTNESS)
+  {
     handleBrightness();
   }
 
