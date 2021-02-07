@@ -24,11 +24,13 @@ struct Text
     int delay = 5000;
 };
 
+void handleText();
+
 void showText(Text text);
 
 void println(String text, uint16_t color, uint8_t size, int16_t x, int16_t y, bool wrap, bool clearScreen, int d);
 
 void scroll(String text, int speed, uint16_t color, uint8_t size, int16_t y);
-
+void updateScroll();
 
 #endif

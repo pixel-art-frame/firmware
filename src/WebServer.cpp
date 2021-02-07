@@ -121,7 +121,7 @@ void handleBrightness(AsyncWebServerRequest *request)
     dma_display.setPanelBrightness(config.brightness);
     interruptGif = true;
 
-    frame_state = ADJ_BRIGHTNESS;
+    target_state = ADJ_BRIGHTNESS;
 
     request->send(200, "text/plain", String(config.brightness));
 }
@@ -287,13 +287,15 @@ void deleteFile(AsyncWebServerRequest *request)
     request->send(200, "text/plain", "Deleted File: " + String(fileName));
 }
 
-void handleText(AsyncWebServerRequest *request)
+void handleTextRequest(AsyncWebServerRequest *request)
 {
     if (!request->hasParam("text"))
     {
         request->send(400, "text/plain", "Missing parameter: text");
         return;
     }
+
+    request->send(200, "text/plain", "OK");
 
     interruptGif = true;
 
@@ -309,9 +311,11 @@ void handleText(AsyncWebServerRequest *request)
     text.clearScreen = request->hasParam("clearScreen") ? request->getParam("clearScreen")->value() == "1" : true;
 
     text.speed = request->hasParam("speed") ? atoi(request->getParam("speed")->value().c_str()) : 4;
-    text.delay = request->hasParam("delay") ? atoi(request->getParam("delay")->value().c_str()) : 5000;
+    text.delay = request->hasParam("delay") ? atoi(request->getParam("delay")->value().c_str()) * 1000 : 5000;
 
-    frame_state = SHOW_TEXT;
+    showText(text);
+
+    target_state = SHOW_TEXT;
 }
 
 void configureWebServer()
@@ -347,7 +351,7 @@ void configureWebServer()
 
     server->on("/gif", HTTP_POST, handlePlayGif);
 
-    server->on("/text", HTTP_POST, handleText);
+    server->on("/text", HTTP_POST, handleTextRequest);
 
     server->on("/panel/brightness", HTTP_POST, handleBrightness);
     server->on("/panel/brightness", HTTP_GET, [](AsyncWebServerRequest *request) {

@@ -45,14 +45,14 @@ void connect()
 {
     WiFi.begin(config.ssid.c_str(), config.pass.c_str());
 
-    frame_state = CONNECT_WIFI;
+    target_state = CONNECT_WIFI;
     connect_start = millis();
 }
 
 void connecting()
 {
     if (WiFi.status() == WL_CONNECTED) { // Successfully connected
-        frame_state = PLAYING_ART;
+        target_state = PLAYING_ART;
         return;
     }
     
@@ -60,7 +60,7 @@ void connecting()
     ShowGIF(CONN_GIF, true);
 
     if (millis() - connect_start  > 10000) {
-      frame_state = PLAYING_ART;
+      target_state = PLAYING_ART;
       createAP();      
     }
 }

@@ -85,7 +85,7 @@ void handleOTA()
         setupOTA();
 
         ota_ready = true;
-        frame_state = OTA_UPDATE;
+        target_state = OTA_UPDATE;
         interruptGif = true;
         println("Ready for OTA update", virtualDisp.color565(0, 255, 0), 1, 0, 4, true, true, 0);
     }

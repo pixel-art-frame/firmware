@@ -19,7 +19,6 @@ typedef enum {
 } frame_status_t;
 
 
-extern frame_status_t frame_state;
 extern frame_status_t target_state;
 extern unsigned long lastStateChange;
 

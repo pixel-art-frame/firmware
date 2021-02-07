@@ -38,6 +38,12 @@ unsigned long lastStateChange = 0;
 
 Config config;
 
+void showDateTime()
+{
+  println("15:40", virtualDisp.color565(255, 255, 0), 2, 3, 9, false, true, 0);
+  println("07/02", virtualDisp.color565(255, 0, 0), 2, 3, 41, false, false, 10 * 1000);
+}
+
 void handleBrightness()
 {
   ShowGIF("/bulb.gif", true);
@@ -116,7 +122,7 @@ void loop()
 
   if (frame_state == SHOW_TEXT)
   {
-    showText(text);
+    handleText();
   }
 
   if (frame_state == CONNECT_WIFI)
