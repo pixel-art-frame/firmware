@@ -10,6 +10,7 @@ typedef enum {
     OFF = 0, // LED matrix is off
     PLAYING_ART, // Looping trough art
     SHOW_TEXT,
+    SHOW_TIME,
 
     CONNECT_WIFI, // Connecting to WiFi
     ADJ_BRIGHTNESS, // Adjusting brightness

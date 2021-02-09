@@ -6,11 +6,12 @@
 
 #include "Global.h"
 #include "Configuration.hpp"
-#include "MatrixGif.hpp"
 #include "Gifplayer.hpp"
 #include "WebServer.hpp"
 #include "Wifi.hpp"
+#include "MatrixGif.hpp"
 #include "MatrixText.hpp"
+#include "MatrixTime.hpp"
 #include "OTA.h"
 
 #define SCK 33
@@ -38,11 +39,9 @@ unsigned long lastStateChange = 0;
 
 Config config;
 
-void showDateTime()
-{
-  println("15:40", virtualDisp.color565(255, 255, 0), 2, 3, 9, false, true, 0);
-  println("07/02", virtualDisp.color565(255, 0, 0), 2, 3, 41, false, false, 10 * 1000);
-}
+// TODO: Move to config
+bool showTime = true;
+int timeEverySeconds = 30;
 
 void handleBrightness()
 {
@@ -51,6 +50,16 @@ void handleBrightness()
   if (millis() - lastStateChange > 5000)
   {
     frame_state = PLAYING_ART;
+  }
+}
+
+void handleScheduled()
+{
+  // Time
+  if (showTime && millis() - lastTimeShow > timeEverySeconds * 1000)
+  {
+    lastTimeShow = millis();
+    target_state = SHOW_TIME;
   }
 }
 
@@ -97,10 +106,14 @@ void setup()
   setupWifi();
 
   initServer();
+
+  setupNTPClient();
 }
 
 void loop()
 {
+  handleScheduled();
+
   if (target_state != frame_state)
   {
     frame_state = target_state;
@@ -123,6 +136,11 @@ void loop()
   if (frame_state == SHOW_TEXT)
   {
     handleText();
+  }
+
+  if (frame_state == SHOW_TIME)
+  {
+    handleTime();
   }
 
   if (frame_state == CONNECT_WIFI)
