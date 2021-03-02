@@ -7,6 +7,11 @@
 #define AUTOPLAY_KEY "autoplay"
 #define SSID_KEY "ssid"
 #define PASS_KEY "pass"
+#define ENABLE_TIME_KEY "enable_time"
+#define TIME_SECONDS_KEY "time_seconds"
+#define TIME_INTERVAL_KEY "time_interval"
+#define TIME_OFFSET_KEY "time_offset"
+#define NTP_SERVER_KEY "ntp_server"
 
 void loadSettings()
 {
@@ -25,6 +30,11 @@ void loadSettings()
   config.ssid = String(doc[SSID_KEY] | "");
   config.pass = String(doc[PASS_KEY] | "");
 
+  config.enableTime = String(doc[ENABLE_TIME_KEY] | true);
+  config.timeInterval = doc[TIME_INTERVAL_KEY] | 60000;
+  config.timeShowSeconds = doc[TIME_SECONDS_KEY] | 5000;
+  config.timeOffset = doc[TIME_OFFSET_KEY] | 0;
+
   configFile.close();
 }
 
@@ -36,6 +46,12 @@ void saveSettings()
   doc[AUTOPLAY_KEY] = config.autoPlay;
   doc[SSID_KEY] = config.ssid;
   doc[PASS_KEY] = config.pass;
+
+  doc[ENABLE_TIME_KEY] = config.enableTime;
+  doc[TIME_INTERVAL_KEY] = config.timeInterval;
+  doc[TIME_SECONDS_KEY] = config.timeShowSeconds;
+  doc[TIME_OFFSET_KEY] = config.timeOffset;
+  doc[NTP_SERVER_KEY] = config.ntpServer;
 
   if (SPIFFS.exists(CONFIG_FILENAME))
   {

@@ -19,6 +19,7 @@ void handleText()
 {
     if ((!scrolling && millis() - show_text_start > text_delay) || scroll_finished)
     {
+        Serial.println("Text finished, returinig to art");
         target_state = PLAYING_ART;
     }
 
@@ -30,22 +31,28 @@ void handleText()
 
 void showText(Text t)
 {
+    Serial.println("Showing text");
     if (t.scroll)
     {
         scroll(t.text, t.speed, t.color, t.size, t.y);
         return;
     }
 
+    Serial.println("println " + t.text);
     println(t.text, t.color, t.size, t.x, t.y, t.wrap, t.clearScreen, t.delay);
 }
 
 void println(String text, uint16_t color = DEFAULT_TEXT_COLOR, uint8_t size = 1, int16_t x = 4, int16_t y = 4, bool wrap = true, bool clearScreen = true, int d = 4000)
 {
     target_state = SHOW_TEXT;
+    interruptGif = true;
     show_text_start = millis();
 
     if (clearScreen)
+    {
+        delay(100);
         virtualDisp.clearScreen();
+    }
 
     virtualDisp.setTextWrap(wrap);
     virtualDisp.setCursor(x, y);
@@ -64,7 +71,7 @@ void scroll(String text, int speed = 50, uint16_t color = DEFAULT_TEXT_COLOR, ui
     scroll_text_length = text.length();
     scroll_text_size = size;
     scroll_speed = speed;
-    scroll_x = MATRIX_WIDTH/2;
+    scroll_x = MATRIX_WIDTH / 2;
     scroll_y = y;
     scroll_finished = false;
     scrolling = true;
@@ -78,7 +85,7 @@ void scroll(String text, int speed = 50, uint16_t color = DEFAULT_TEXT_COLOR, ui
 
 void updateScroll()
 {
-    scroll_finished = scroll_x < -((MATRIX_WIDTH/2) + scroll_text_length * (scroll_text_size * 6));
+    scroll_finished = scroll_x < -((MATRIX_WIDTH / 2) + scroll_text_length * (scroll_text_size * 6));
 
     if (scroll_finished)
     {

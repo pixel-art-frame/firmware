@@ -14,6 +14,12 @@ struct Config
   wifi_mode_t wifiMode;
   String ssid;
   String pass;
+
+  bool enableTime;
+  int timeInterval;
+  int timeShowSeconds;
+  int timeOffset;
+  String ntpServer;
 };
 
 void loadSettings();

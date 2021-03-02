@@ -3,16 +3,30 @@
 #include "Global.h"
 #include "MatrixText.hpp"
 
-const long utcOffsetInSeconds = -14400;
+#define TIME_X 2
+#define TIME_Y 9
+
+#if PANEL_128_32
+
+#define DATE_X 3
+#define DATE_Y 41
+
+#else
+
+#define DATE_X 64
+#define DATE_Y 9
+
+#endif
+
+const int utcOffsetInSeconds = -14400;
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds);
 
-// TODO: Move to config
-// How long should we show the time?
-int timeShowSeconds = 4;
-
 void setupNTPClient()
 {
+    if (!config.enableTime)
+        return;
+
     timeClient.begin();
 
     // Set offset time in seconds to adjust for your timezone, for example:
@@ -20,15 +34,19 @@ void setupNTPClient()
     // GMT +8 = 28800
     // GMT -1 = -3600
     // GMT 0 = 0
-    timeClient.setTimeOffset(3600);
+    timeClient.setTimeOffset(config.timeOffset);
 }
 
 void handleTime()
 {
+    if (!config.enableTime)
+        return;
+
     while (!timeClient.update())
     {
         timeClient.forceUpdate();
     }
+
     unsigned long epochTime = timeClient.getEpochTime();
     struct tm *ptm = gmtime((time_t *)&epochTime);
 
@@ -46,6 +64,6 @@ void handleTime()
     String monthStr = month < 10 ? "0" + String(month) : String(month);
     String date = dayStr + "/" + monthStr;
 
-    println(time, virtualDisp.color565(0, 255, 0), 2, 1, 9, false, true, 0);
-    println(date, virtualDisp.color565(0, 0, 255), 2, 3, 41, false, false, timeShowSeconds * 1000);
+    println(time, virtualDisp.color565(0, 255, 0), 2, TIME_X, TIME_Y, false, true, 0);
+    println(date, virtualDisp.color565(0, 0, 255), 2, DATE_X, DATE_Y, false, false, config.timeShowSeconds * 1000);
 }

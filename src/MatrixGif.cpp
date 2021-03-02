@@ -23,6 +23,8 @@ void GIFDraw(GIFDRAW *pDraw)
   if (iWidth > MATRIX_WIDTH)
     iWidth = MATRIX_WIDTH;
 
+  //Serial.println("pal565: " + String(*pDraw->pPalette) + " - pal888:" + String(*pDraw->pPalette24));
+
   usPalette = pDraw->pPalette;
   y = pDraw->iY + pDraw->y; // current line
 
@@ -90,6 +92,7 @@ void GIFDraw(GIFDRAW *pDraw)
   else // does not have transparency
   {
     s = pDraw->pPixels;
+
     // Translate the 8-bit pixels through the RGB565 palette (already byte reversed)
     for (x = 0; x < pDraw->iWidth; x++)
     {
@@ -102,9 +105,7 @@ void *GIFOpenFile(const char *fname, int32_t *pSize)
 {
   if (loadGifFromSpiffs)
   {
-    Serial.println("Opening from SPIFFS");
     f = SPIFFS.open(fname);
-    Serial.println(f.name());
   }
   else
   {
@@ -116,7 +117,7 @@ void *GIFOpenFile(const char *fname, int32_t *pSize)
     *pSize = f.size();
     return (void *)&f;
   }
-  Serial.println("Failed");
+
   return NULL;
 } /* GIFOpenFile() */
 
@@ -165,9 +166,19 @@ void ShowGIF(char *name, bool fromSpiffs = false)
     y_offset = (MATRIX_HEIGHT - animGif.getCanvasHeight()) / 2;
     if (y_offset < 0)
       y_offset = 0;
-    // Serial.printf("Successfully opened GIF; Canvas size = %d x %d\n", animGif.getCanvasWidth(), animGif.getCanvasHeight());
+    //Serial.printf("Successfully opened GIF; Canvas size = %d x %d\n", animGif.getCanvasWidth(), animGif.getCanvasHeight());
     // Serial.flush();
-    while (animGif.playFrame(true, NULL) && !interruptGif) {}
+
+    int result = 1;
+
+    while ((result = animGif.playFrame(true, NULL)) && !interruptGif)
+    {
+      if (result == -1)
+      {
+        Serial.println("ERROR playing " + String(name));
+        break;
+      }
+    }
     interruptGif = false;
     animGif.close();
   }

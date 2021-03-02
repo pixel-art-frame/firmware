@@ -19,6 +19,20 @@
 #define MOSI 21
 #define CS 22
 
+#define PANEL_128_32 true
+
+#if PANEL_128_32
+
+// Config for 2 64x32 panels chained in a stacked config.
+// Change MATRIX_WIDTH to 128 in ESP32-HUB75-MatrixPanel-I2S-DMA.h
+#define PANEL_RES_X 64 // Number of pixels wide of each INDIVIDUAL panel module.
+#define PANEL_RES_Y 32 // Number of pixels tall of each INDIVIDUAL panel module.
+
+#define NUM_ROWS 1 // Number of rows of chained INDIVIDUAL PANELS
+#define NUM_COLS 2 // Number of INDIVIDUAL PANELS per ROW
+
+#else
+
 // Config for 2 64x32 panels chained in a stacked config.
 // Change MATRIX_WIDTH to 128 in ESP32-HUB75-MatrixPanel-I2S-DMA.h
 #define PANEL_RES_X 64 // Number of pixels wide of each INDIVIDUAL panel module.
@@ -26,6 +40,8 @@
 
 #define NUM_ROWS 2 // Number of rows of chained INDIVIDUAL PANELS
 #define NUM_COLS 1 // Number of INDIVIDUAL PANELS per ROW
+
+#endif
 
 MatrixPanel_I2S_DMA dma_display;
 VirtualMatrixPanel virtualDisp(dma_display, NUM_ROWS, NUM_COLS, PANEL_RES_X, PANEL_RES_Y, true);
@@ -39,24 +55,20 @@ unsigned long lastStateChange = 0;
 
 Config config;
 
-// TODO: Move to config
-bool showTime = true;
-int timeEverySeconds = 30;
-
 void handleBrightness()
 {
   ShowGIF("/bulb.gif", true);
 
-  if (millis() - lastStateChange > 5000)
+  if (millis() - lastStateChange > 1000)
   {
-    frame_state = PLAYING_ART;
+    target_state = PLAYING_ART;
   }
 }
 
 void handleScheduled()
 {
   // Time
-  if (showTime && millis() - lastTimeShow > timeEverySeconds * 1000)
+  if (config.enableTime && millis() - lastTimeShow > config.timeInterval * 1000)
   {
     lastTimeShow = millis();
     target_state = SHOW_TIME;
@@ -93,8 +105,8 @@ void setup()
   dma_display.setPanelBrightness(config.brightness);
   dma_display.setMinRefreshRate(200);
 
-  //dma_display.begin(R1_PIN_DEFAULT, G1_PIN_DEFAULT, B1_PIN_DEFAULT, R2_PIN_DEFAULT, G2_PIN_DEFAULT, B2_PIN_DEFAULT, A_PIN_DEFAULT, B_PIN_DEFAULT, C_PIN_DEFAULT, D_PIN_DEFAULT, E_PIN_DEFAULT, LAT_PIN_DEFAULT, OE_PIN_DEFAULT, CLK_PIN_DEFAULT, FM6126A);
-  dma_display.begin();
+  dma_display.begin(R1_PIN_DEFAULT, G1_PIN_DEFAULT, B1_PIN_DEFAULT, R2_PIN_DEFAULT, G2_PIN_DEFAULT, B2_PIN_DEFAULT, A_PIN_DEFAULT, B_PIN_DEFAULT, C_PIN_DEFAULT, D_PIN_DEFAULT, E_PIN_DEFAULT, LAT_PIN_DEFAULT, OE_PIN_DEFAULT, CLK_PIN_DEFAULT, FM6126A);
+  // dma_display.begin();
 
   virtualDisp.fillScreen(dma_display.color565(0, 0, 0));
 
@@ -117,14 +129,6 @@ void loop()
   if (target_state != frame_state)
   {
     frame_state = target_state;
-  }
-
-  if (lastState != frame_state)
-  {
-    lastState = frame_state;
-
-    Serial.print("Changed state to: ");
-    Serial.println(frame_state);
     lastStateChange = millis();
   }
 

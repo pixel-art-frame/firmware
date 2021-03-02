@@ -318,17 +318,55 @@ void handleTextRequest(AsyncWebServerRequest *request)
     target_state = SHOW_TEXT;
 }
 
+void handleTimeSettings(AsyncWebServerRequest *request)
+{
+    if (
+        !request->hasParam("enable") ||
+        !request->hasParam("interval") ||
+        !request->hasParam("show") ||
+        !request->hasParam("offset"))
+    {
+        request->send(400, "text/plain", "Missing parameter(s): enable, interval, show and offset");
+        return;
+    }
+
+    config.enableTime = request->getParam("enable")->value() == "1";
+    config.timeInterval = atoi(request->getParam("interval")->value().c_str());
+    config.timeOffset = atoi(request->getParam("offset")->value().c_str());
+    config.timeShowSeconds = atoi(request->getParam("show")->value().c_str());
+
+    saveSettings();
+
+    request->send(200, "text/plain", "Saved");
+}
+
+void handleGetTimeSettings(AsyncWebServerRequest *request)
+{
+    String response = "{";
+
+    response += "\"enable\": " + String(config.enableTime) + ",";
+    response += "\"interval\": " + String(config.timeInterval) + ",";
+    response += "\"offset\": " + String(config.timeOffset) + ",";
+    response += "\"show\": " + String(config.timeShowSeconds) + "}";
+
+    request->send(200, "application/json", response);
+}
+
 void configureWebServer()
 {
-    server->on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-        if (!SPIFFS.exists("index.html"))
+    server->on("/", HTTP_GET, [](AsyncWebServerRequest *request) {        
+        if (!SPIFFS.exists("/index.html"))
         {
             request->send_P(200, "text/html", default_index);
             return;
         }
 
-        request->send(SPIFFS, "index.html");
+        Serial.println("Returning index from spiffs");
+
+        request->send(SPIFFS, "/index.html");
     });
+
+    server->serveStatic("/_assets", SPIFFS, "/_assets/");
 
     server->on("/gif/name", HTTP_GET, [](AsyncWebServerRequest *request) {
         request->send(200, "text/plain", String(getCurrentGif()));
@@ -352,6 +390,14 @@ void configureWebServer()
     server->on("/gif", HTTP_POST, handlePlayGif);
 
     server->on("/text", HTTP_POST, handleTextRequest);
+
+    server->on("/time/show", HTTP_GET, [](AsyncWebServerRequest *request) {
+        target_state = SHOW_TIME;
+        interruptGif = true;
+        request->send(200, "text/plain");
+    });
+    server->on("/time/settings", HTTP_POST, handleTimeSettings);
+    server->on("/time/settings", HTTP_GET, handleGetTimeSettings);
 
     server->on("/panel/brightness", HTTP_POST, handleBrightness);
     server->on("/panel/brightness", HTTP_GET, [](AsyncWebServerRequest *request) {
