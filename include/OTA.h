@@ -93,7 +93,7 @@ void handleOTA()
     if (!ota_started && millis() - ota_mode_start > OTA_MODE_TIMEOUT)
     {
         println("OTA\nTimeout\n\nRestarting", virtualDisp.color565(255, 0, 0), 1, 0, 4, true, true, 1000);
-        delay(4000);
+        delay(4000); 
         ESP.restart();
         return;
     }

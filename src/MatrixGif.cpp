@@ -4,6 +4,8 @@
 #include <SPIFFS.h>
 #include "Global.h"
 
+#define MAX_FILE_READ_COUNT 3
+
 unsigned long start_tick = 0;
 VirtualMatrixPanel *matrixGifPanel;
 AnimatedGIF animGif;
@@ -11,6 +13,8 @@ File f;
 int x_offset, y_offset;
 bool interruptGif = false,
      loadGifFromSpiffs = false;
+
+int8_t file_open_error_count = 0;
 
 // Draw a line of image directly on the LED Matrix
 void GIFDraw(GIFDRAW *pDraw)
@@ -109,7 +113,14 @@ void *GIFOpenFile(const char *fname, int32_t *pSize)
   }
   else
   {
+    if (!SD.exists(fname))
+    {
+      return NULL;
+    }
+
     f = SD.open(fname);
+
+    file_open_error_count = 0;
   }
 
   if (f)
@@ -176,6 +187,8 @@ void ShowGIF(char *name, bool fromSpiffs = false)
       if (result == -1)
       {
         Serial.println("ERROR playing " + String(name));
+        sd_ready = false;
+
         break;
       }
     }

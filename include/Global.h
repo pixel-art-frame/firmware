@@ -11,6 +11,7 @@ typedef enum {
     PLAYING_ART, // Looping trough art
     SHOW_TEXT,
     SHOW_TIME,
+    STARTUP,
 
     CONNECT_WIFI, // Connecting to WiFi
     ADJ_BRIGHTNESS, // Adjusting brightness
@@ -19,6 +20,7 @@ typedef enum {
 
 } frame_status_t;
 
+extern bool sd_ready;
 
 extern frame_status_t target_state;
 extern unsigned long lastStateChange;

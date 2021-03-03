@@ -354,7 +354,7 @@ void handleGetTimeSettings(AsyncWebServerRequest *request)
 
 void configureWebServer()
 {
-    server->on("/", HTTP_GET, [](AsyncWebServerRequest *request) {        
+    server->on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
         if (!SPIFFS.exists("/index.html"))
         {
             request->send_P(200, "text/html", default_index);
@@ -433,6 +433,27 @@ void configureWebServer()
         request->send(200, "text/plain", "Started OTA mode");
 
         target_state = OTA_UPDATE;
+        interruptGif = true;
+    });
+
+    server->on("/state", HTTP_GET, [](AsyncWebServerRequest *request) {
+        if (!request->hasParam("state"))
+        {
+            request->send(400, "text/plain", "Missing param: state");
+            return;
+        }
+
+        int state = atoi(request->getParam("state")->value().c_str());
+
+        if (state < 0 || state > OTA_UPDATE + 1)
+        {
+            request->send(400, "text/plain", "Must be between 0 and " + String(OTA_UPDATE + 1));
+            return;
+        }
+
+        request->send(200, "text/plain", "Changing state to: " + String(state));
+
+        target_state = (frame_status_t) state;
         interruptGif = true;
     });
 }

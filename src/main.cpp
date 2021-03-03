@@ -20,6 +20,7 @@
 #define CS 22
 
 #define PANEL_128_32 true
+#define FM6126A_PANEL false
 
 #if PANEL_128_32
 
@@ -46,10 +47,14 @@
 MatrixPanel_I2S_DMA dma_display;
 VirtualMatrixPanel virtualDisp(dma_display, NUM_ROWS, NUM_COLS, PANEL_RES_X, PANEL_RES_Y, true);
 
-SPIClass sd_spi(HSPI);
+// Flag for the OFF state
+bool displayClear = false;
 
-frame_status_t frame_state = PLAYING_ART;
-frame_status_t target_state = PLAYING_ART;
+SPIClass sd_spi(HSPI);
+bool sd_ready = false;
+
+frame_status_t frame_state = STARTUP;
+frame_status_t target_state = STARTUP;
 frame_status_t lastState = frame_state;
 unsigned long lastStateChange = 0;
 
@@ -91,11 +96,7 @@ void setup()
   Serial.println("Init SD");
   sd_spi.begin(SCK, MISO, MOSI, CS);
 
-  if (!SD.begin(CS, sd_spi))
-  {
-    Serial.println("Failed to open SD card");
-    // TODO: Message on display
-  }
+  sd_ready = SD.begin(CS, sd_spi);
 
   if (!SPIFFS.begin())
   {
@@ -105,31 +106,64 @@ void setup()
   dma_display.setPanelBrightness(config.brightness);
   dma_display.setMinRefreshRate(200);
 
+#if FM6126A_PANEL
   dma_display.begin(R1_PIN_DEFAULT, G1_PIN_DEFAULT, B1_PIN_DEFAULT, R2_PIN_DEFAULT, G2_PIN_DEFAULT, B2_PIN_DEFAULT, A_PIN_DEFAULT, B_PIN_DEFAULT, C_PIN_DEFAULT, D_PIN_DEFAULT, E_PIN_DEFAULT, LAT_PIN_DEFAULT, OE_PIN_DEFAULT, CLK_PIN_DEFAULT, FM6126A);
-  // dma_display.begin();
+#else
+  dma_display.begin();
+#endif
 
   virtualDisp.fillScreen(dma_display.color565(0, 0, 0));
 
   InitMatrixGif(&virtualDisp);
-
-  File root = SPIFFS.open("/");
-  File tmp = root.openNextFile();
 
   setupWifi();
 
   initServer();
 
   setupNTPClient();
+
+  target_state = PLAYING_ART;
+}
+
+void handleSdError()
+{
+  SD.end();
+  sd_ready = SD.begin(CS, sd_spi);
+
+  if (sd_ready)
+    return;
+
+  println("SD Failed\nInsert SD", dma_display.color565(255, 0, 0), 1, 1, 1, true, true, 1000);
+}
+
+bool targetStateValid()
+{
+  if (target_state == PLAYING_ART && !sd_ready)
+  {
+    return false;
+  }
+
+  return true;
 }
 
 void loop()
 {
   handleScheduled();
 
-  if (target_state != frame_state)
+  if (!sd_ready) {
+    handleSdError();
+  }
+
+  if (target_state != frame_state && targetStateValid())
   {
     frame_state = target_state;
     lastStateChange = millis();
+  }
+
+  if (frame_state == OFF && !displayClear)
+  {
+    virtualDisp.fillScreen(dma_display.color565(0, 0, 0));
+    displayClear = true;
   }
 
   if (frame_state == PLAYING_ART)
