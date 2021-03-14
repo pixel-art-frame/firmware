@@ -12,6 +12,8 @@ int minPlaytime = 4000;
 char *gifDir = "/gifs";
 int currentGifIndex = 0;
 
+File currentGif;
+
 std::vector<String> gifs;
 
 void loadGifs()
@@ -35,6 +37,8 @@ void loadGifs()
             continue;
         }
 
+        Serial.println("Loaded " + String(currentGif.name()));
+
         gifs.push_back(String((char *)currentGif.name()));
 
         currentGif.close();
@@ -46,21 +50,15 @@ void loadGifs()
 
 char *getCurrentGif()
 {
-    return (char *)gifs.at(currentGifIndex).c_str();
+    return (char *)currentGif.name();
 }
 
 void nextGif()
 {
+    
+    //currentGif.ne
+    
     gifStart = millis();
-
-    currentGifIndex++;
-
-    if (currentGifIndex > (gifs.size() - 1))
-    {
-        currentGifIndex = 0;
-        std::random_shuffle(gifs.begin(), gifs.end());
-    }
-
     interruptGif = true;
 }
 
@@ -85,21 +83,15 @@ void setGif(int index)
     {
         return;
     }
-    
+
     gifStart = millis();
     currentGifIndex = index;
     interruptGif = true;
 }
 
-void playGif()
+void handleGif()
 {
-    if (!gifsLoaded)
-    {
-        loadGifs();
-        gifsLoaded = true;
-    }
-
-    if (autoPlay && millis() - gifStart > minPlaytime)
+    if (!gifPlaying && (autoPlay && millis() - gifStart > minPlaytime))
     {
         nextGif();
     }

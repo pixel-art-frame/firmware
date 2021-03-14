@@ -12,8 +12,9 @@ AnimatedGIF animGif;
 File f;
 int x_offset, y_offset;
 bool interruptGif = false,
-     loadGifFromSpiffs = false;
-
+     loadGifFromSpiffs = false,
+     gifPlaying = false;
+int lastResult;
 int8_t file_open_error_count = 0;
 
 // Draw a line of image directly on the LED Matrix
@@ -165,35 +166,55 @@ int32_t GIFSeekFile(GIFFILE *pFile, int32_t iPosition)
   return pFile->iPos;
 } /* GIFSeekFile() */
 
+int LoadGIF(char *name)
+{
+  int result = animGif.open(name, GIFOpenFile, GIFCloseFile, GIFReadFile, GIFSeekFile, GIFDraw);
+
+  x_offset = (MATRIX_WIDTH - animGif.getCanvasWidth()) / 2;
+  if (x_offset < 0)
+    x_offset = 0;
+
+  y_offset = (MATRIX_HEIGHT - animGif.getCanvasHeight()) / 2;
+  if (y_offset < 0)
+    y_offset = 0;
+
+  return result;
+}
+
 void ShowGIF(char *name, bool fromSpiffs = false)
 {
-  loadGifFromSpiffs = fromSpiffs;
-
-  if (animGif.open(name, GIFOpenFile, GIFCloseFile, GIFReadFile, GIFSeekFile, GIFDraw))
+  if (!gifPlaying)
   {
-    x_offset = (MATRIX_WIDTH - animGif.getCanvasWidth()) / 2;
-    if (x_offset < 0)
-      x_offset = 0;
-    y_offset = (MATRIX_HEIGHT - animGif.getCanvasHeight()) / 2;
-    if (y_offset < 0)
-      y_offset = 0;
-    //Serial.printf("Successfully opened GIF; Canvas size = %d x %d\n", animGif.getCanvasWidth(), animGif.getCanvasHeight());
-    // Serial.flush();
+    Serial.println("Gif NOT loaded, loading");
+    loadGifFromSpiffs = fromSpiffs;
 
-    int result = 1;
+    LoadGIF(name);
+    gifPlaying = true;
+  }
 
-    while ((result = animGif.playFrame(true, NULL)) && !interruptGif)
-    {
-      if (result == -1)
-      {
-        Serial.println("ERROR playing " + String(name));
-        sd_ready = false;
-
-        break;
-      }
-    }
-    interruptGif = false;
+  if (interruptGif && gifPlaying)
+  {
+    Serial.println("Interrupting GIF");
+    gifPlaying = interruptGif = false;
     animGif.close();
+    return;
+  }
+
+  lastResult = animGif.playFrame(true, NULL);
+
+  Serial.println("Played frame, result: " + String(lastResult));
+
+  if (lastResult == -1)
+  {
+    Serial.println("ERROR playing " + String(name));
+    sd_ready = false;
+  }
+
+  if (lastResult == 0)
+  {
+    Serial.println("FINISHED, next!");
+    animGif.close();
+    gifPlaying = false;
   }
 
 } /* ShowGIF() */

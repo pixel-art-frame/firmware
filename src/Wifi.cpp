@@ -19,16 +19,14 @@ unsigned long connect_start = 0;
  */
 void setupWifi()
 {
-    Serial.println("Setting up WIFI:");
-
     if (config.ssid != "")
     {
-        Serial.println("Connectring to WIFI");
+        dma_display.println("Connecting to WIFI\n" + config.ssid);
         connect();
         return;
     }
 
-    Serial.println("No SSID saved, creating AP");
+    dma_display.println("No SSID saved, creating AP");
 
     createAP();
 }
@@ -51,17 +49,19 @@ void connect()
 
 void connecting()
 {
-    if (WiFi.status() == WL_CONNECTED) { // Successfully connected
+    if (WiFi.status() == WL_CONNECTED)
+    { // Successfully connected
         target_state = PLAYING_ART;
         return;
     }
-    
+
     Serial.println("Playing wifi_connecting GIF");
     ShowGIF(CONN_GIF, true);
 
-    if (millis() - connect_start  > 10000) {
-      target_state = PLAYING_ART;
-      createAP();      
+    if (millis() - connect_start > 10000)
+    {
+        target_state = PLAYING_ART;
+        createAP();
     }
 }
 

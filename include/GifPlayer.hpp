@@ -3,7 +3,7 @@
 
 void loadGifs();
 char* getCurrentGif();
-void playGif();
+void handleGif();
 void nextGif();
 void prevGif();
 void setGif(int index);

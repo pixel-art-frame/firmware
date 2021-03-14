@@ -37,15 +37,18 @@ void setupNTPClient()
     timeClient.setTimeOffset(config.timeOffset);
 }
 
-void handleTime()
+void updateTime()
 {
     if (!config.enableTime)
         return;
 
-    while (!timeClient.update())
-    {
-        timeClient.forceUpdate();
-    }
+    timeClient.update();
+}
+
+void handleTime()
+{
+    if (!config.enableTime)
+        return;
 
     unsigned long epochTime = timeClient.getEpochTime();
     struct tm *ptm = gmtime((time_t *)&epochTime);

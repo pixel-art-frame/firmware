@@ -73,10 +73,19 @@ void handleBrightness()
 void handleScheduled()
 {
   // Time
-  if (config.enableTime && millis() - lastTimeShow > config.timeInterval * 1000)
+  if (config.enableTime)
   {
-    lastTimeShow = millis();
-    target_state = SHOW_TIME;
+    if (millis() - lastTimeShow > config.timeInterval * 1000)
+    {
+      lastTimeShow = millis();
+      target_state = SHOW_TIME;
+    }
+
+    // Update time2 secs before we should show it
+    if ((millis() + 2000) - lastTimeShow > config.timeInterval * 1000)
+    {
+      updateTime();
+    }
   }
 }
 
@@ -150,11 +159,12 @@ void loop()
 {
   handleScheduled();
 
-  if (!sd_ready) {
+  if (!sd_ready)
+  {
     handleSdError();
   }
 
-  if (target_state != frame_state && targetStateValid())
+  if (!gifPlaying && target_state != frame_state && targetStateValid())
   {
     frame_state = target_state;
     lastStateChange = millis();
@@ -168,7 +178,7 @@ void loop()
 
   if (frame_state == PLAYING_ART)
   {
-    playGif();
+    handleGif();
   }
 
   if (frame_state == SHOW_TEXT)

@@ -38,5 +38,6 @@ extern Text text;
 
 extern int brightness;
 extern bool autoPlay;
+extern bool gifPlaying;
 
 #endif
