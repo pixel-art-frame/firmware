@@ -3,6 +3,7 @@
 #include <SD.h>
 #include "Global.h"
 #include "MatrixGif.hpp"
+#include "GifLoader.hpp"
 
 bool gifsLoaded = false,
      autoPlay = true;
@@ -10,14 +11,14 @@ bool gifsLoaded = false,
 unsigned long gifStart = 0;
 int minPlaytime = 4000;
 char *gifDir = "/gifs";
+String currentGif;
 int currentGifIndex = 0;
 
-File currentGif;
-
-std::vector<String> gifs;
+std::vector<String> gifs; // TODO: Store history here
 
 void loadGifs()
 {
+    return;
     gifs.clear();
     File root = SD.open(gifDir);
 
@@ -48,15 +49,9 @@ void loadGifs()
     gifsLoaded = true;
 }
 
-char *getCurrentGif()
-{
-    return (char *)currentGif.name();
-}
-
 void nextGif()
 {
-    
-    //currentGif.ne
+    currentGif = getNextGif();
     
     gifStart = millis();
     interruptGif = true;
@@ -91,10 +86,21 @@ void setGif(int index)
 
 void handleGif()
 {
+    if (currentGif.length() == 0) {
+        nextGif(); // TODO: Handle empty queue
+    }
+
+    while (!currentGif.endsWith(".gif")) {
+        nextGif();
+    }
+
     if (!gifPlaying && (autoPlay && millis() - gifStart > minPlaytime))
     {
         nextGif();
     }
 
-    ShowGIF(getCurrentGif());
+    char gif[currentGif.length()+1];
+    currentGif.toCharArray(gif, sizeof(gif));
+
+    ShowGIF(gif);
 }

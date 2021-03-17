@@ -6,7 +6,8 @@
 
 #include "Global.h"
 #include "Configuration.hpp"
-#include "Gifplayer.hpp"
+#include "GifLoader.hpp"
+#include "GifPlayer.hpp"
 #include "WebServer.hpp"
 #include "Wifi.hpp"
 #include "MatrixGif.hpp"
@@ -72,6 +73,9 @@ void handleBrightness()
 
 void handleScheduled()
 {
+  handleGifQueue();
+  countTotalFiles();
+
   // Time
   if (config.enableTime)
   {

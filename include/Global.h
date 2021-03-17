@@ -39,5 +39,6 @@ extern Text text;
 extern int brightness;
 extern bool autoPlay;
 extern bool gifPlaying;
+extern bool queue_populate_requred;
 
 #endif

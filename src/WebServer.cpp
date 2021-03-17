@@ -368,18 +368,20 @@ void configureWebServer()
 
     server->serveStatic("/_assets", SPIFFS, "/_assets/");
 
+    // TODO: getCurrentGif is gone
+
     server->on("/gif/name", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(200, "text/plain", String(getCurrentGif()));
+      //  request->send(200, "text/plain", String(getCurrentGif()));
     });
 
     server->on("/gif/next", HTTP_GET, [](AsyncWebServerRequest *request) {
         nextGif();
-        request->send(200, "text/plain", String(getCurrentGif()));
+      //  request->send(200, "text/plain", String(getCurrentGif()));
     });
 
     server->on("/gif/prev", HTTP_GET, [](AsyncWebServerRequest *request) {
         prevGif();
-        request->send(200, "text/plain", String(getCurrentGif()));
+       // request->send(200, "text/plain", String(getCurrentGif()));
     });
 
     server->on("/gif/autoplay", HTTP_POST, handleAutoplay);

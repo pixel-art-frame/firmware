@@ -185,8 +185,19 @@ void ShowGIF(char *name, bool fromSpiffs = false)
 {
   if (!gifPlaying)
   {
-    Serial.println("Gif NOT loaded, loading");
     loadGifFromSpiffs = fromSpiffs;
+
+    if (!fromSpiffs && !SD.exists(name))
+    {
+      Serial.println("Attempted to show gif but it doesnt exist on SD: path:" + String(name));
+      return;
+    }
+
+    if (fromSpiffs && !SPIFFS.exists(name))
+    {
+      Serial.println("Attempted to show gif but it doesnt exist on SPIFFS: path:" + String(name));
+      return;
+    }
 
     LoadGIF(name);
     gifPlaying = true;
@@ -194,15 +205,12 @@ void ShowGIF(char *name, bool fromSpiffs = false)
 
   if (interruptGif && gifPlaying)
   {
-    Serial.println("Interrupting GIF");
     gifPlaying = interruptGif = false;
     animGif.close();
     return;
   }
 
   lastResult = animGif.playFrame(true, NULL);
-
-  Serial.println("Played frame, result: " + String(lastResult));
 
   if (lastResult == -1)
   {
@@ -212,7 +220,6 @@ void ShowGIF(char *name, bool fromSpiffs = false)
 
   if (lastResult == 0)
   {
-    Serial.println("FINISHED, next!");
     animGif.close();
     gifPlaying = false;
   }
