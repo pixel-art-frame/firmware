@@ -10,6 +10,8 @@
 #include "Configuration.hpp"
 #include "MatrixText.hpp"
 
+#define FILES_PAGINATION_SIZE 25
+
 const char default_index[] PROGMEM = R"rawliteral(
 <!DOCTYPE HTML>
 <html lang="en">
@@ -147,7 +149,7 @@ void handlePlayGif(AsyncWebServerRequest *request)
         return;
     }
 
-    const char *fileName = request->getParam("name")->value().c_str();
+    String fileName = request->getParam("name")->value();
 
     if (!SD.exists(fileName))
     {
@@ -155,29 +157,54 @@ void handlePlayGif(AsyncWebServerRequest *request)
         return;
     }
 
-    for (int i = 0; i < gifs.size(); i++)
-    {
-        if (strcmp(gifs[i].c_str(), fileName) == 0)
-        {
-            setGif(i);
-            request->send(200, "text/plain", String(fileName));
-            return;
-        }
-    }
+    setGif(fileName);
 
     request->send(400, "text/plain", "File not found");
 }
 
+File paginationFile;
+int page = 1;
+
 void listFiles(AsyncWebServerRequest *request)
 {
-    String jsonResponse = "[";
-
-    for (auto &gif : gifs)
+    if (request->hasParam("firstPage") && paginationFile)
     {
-        jsonResponse += "\"" + gif + "\",";
+        paginationFile.close();
     }
 
-    request->send(200, "application/json", jsonResponse.substring(0, jsonResponse.length() - 1) + "]");
+    if (!paginationFile)
+    {
+        page = 1;
+        paginationFile = SD.open(GIF_DIR);
+    }
+    else
+    {
+        page++;
+    }
+
+    int maxPage = (total_files / FILES_PAGINATION_SIZE) + 1;
+
+    if (page > maxPage)
+        page = maxPage;
+
+    String jsonResponse = "{\"page\":" + String(page) + ",\"pageSize\":" + String(FILES_PAGINATION_SIZE) + ",\"files\":[";
+
+    for (int i = 0; i < FILES_PAGINATION_SIZE; i++)
+    {
+        File f = paginationFile.openNextFile();
+
+        if (!f)
+        {
+            paginationFile.close();
+            break;
+        }
+
+        jsonResponse += "\"" + String(f.name()) + "\",";
+
+        f.close();
+    }
+
+    request->send(200, "application/json", jsonResponse.substring(0, jsonResponse.length() - 1) + "]}");
 }
 
 // handles uploads, source: https://github.com/smford/esp32-asyncwebserver-fileupload-example
@@ -210,7 +237,7 @@ void handleUpload(AsyncWebServerRequest *request, String filename, size_t index,
         Serial.println(logmessage);
         request->redirect("/");
 
-        gifsLoaded = false;
+        total_files++;
     }
 }
 
@@ -242,8 +269,6 @@ void handleSpiffsUpload(AsyncWebServerRequest *request, String filename, size_t 
         request->_tempFile.close();
         Serial.println(logmessage);
         request->redirect("/");
-
-        gifsLoaded = false;
     }
 }
 
@@ -283,7 +308,7 @@ void deleteFile(AsyncWebServerRequest *request)
     }
 
     SD.remove(fileName);
-    gifsLoaded = false;
+    total_files--;
     request->send(200, "text/plain", "Deleted File: " + String(fileName));
 }
 
@@ -352,6 +377,82 @@ void handleGetTimeSettings(AsyncWebServerRequest *request)
     request->send(200, "application/json", response);
 }
 
+void configureApiGifs()
+{
+    server->on("/gif/name", HTTP_GET, [](AsyncWebServerRequest *request) {
+        request->send(200, "text/plain", current_gif);
+    });
+
+    server->on("/gif/next", HTTP_GET, [](AsyncWebServerRequest *request) {
+        nextGif();
+        request->send(200, "text/plain", current_gif);
+    });
+
+    server->on("/gif/autoplay", HTTP_POST, handleAutoplay);
+    server->on("/gif/autoplay", HTTP_GET, [](AsyncWebServerRequest *request) {
+        request->send(200, "text/plain", autoPlay ? "1" : "0");
+    });
+
+    server->on("/gif", HTTP_POST, handlePlayGif);
+}
+
+void configureApiTime()
+{
+    server->on("/time/show", HTTP_GET, [](AsyncWebServerRequest *request) {
+        target_state = SHOW_TIME;
+        interruptGif = true;
+        request->send(200, "text/plain");
+    });
+    server->on("/time/settings", HTTP_POST, handleTimeSettings);
+    server->on("/time/settings", HTTP_GET, handleGetTimeSettings);
+}
+
+void configureApiPanel()
+{
+    server->on("/panel/brightness", HTTP_POST, handleBrightness);
+    server->on("/panel/brightness", HTTP_GET, [](AsyncWebServerRequest *request) {
+        request->send(200, "text/plain", String(config.brightness)); // TODO: Return whole config here
+    });
+}
+
+void configureApiFiles()
+{
+    server->on("/files", listFiles);
+    server->on("/file/delete", deleteFile);
+    server->on("/file", handleFile);
+
+    server->on(
+        "/upload", HTTP_POST, [](AsyncWebServerRequest *request) {
+            request->send(200);
+        },
+        handleUpload);
+
+    server->on(
+        "/spiffs/upload", HTTP_POST, [](AsyncWebServerRequest *request) {
+            request->send(200);
+        },
+        handleSpiffsUpload);
+}
+
+void configureApiConfig()
+{
+    server->on("/config/wifi", HTTP_POST, handleWifiConfig);
+
+    server->on("/wifi/scan", HTTP_GET, handleScanWifi);
+
+    server->on("/restart", HTTP_GET, [](AsyncWebServerRequest *request) {
+        request->send(200);
+        ESP.restart();
+    });
+
+    server->on("/ota", HTTP_GET, [](AsyncWebServerRequest *request) {
+        request->send(200, "text/plain", "Started OTA mode");
+
+        target_state = OTA_UPDATE;
+        interruptGif = true;
+    });
+}
+
 void configureWebServer()
 {
     server->on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -368,75 +469,13 @@ void configureWebServer()
 
     server->serveStatic("/_assets", SPIFFS, "/_assets/");
 
-    // TODO: getCurrentGif is gone
-
-    server->on("/gif/name", HTTP_GET, [](AsyncWebServerRequest *request) {
-      //  request->send(200, "text/plain", String(getCurrentGif()));
-    });
-
-    server->on("/gif/next", HTTP_GET, [](AsyncWebServerRequest *request) {
-        nextGif();
-      //  request->send(200, "text/plain", String(getCurrentGif()));
-    });
-
-    server->on("/gif/prev", HTTP_GET, [](AsyncWebServerRequest *request) {
-        prevGif();
-       // request->send(200, "text/plain", String(getCurrentGif()));
-    });
-
-    server->on("/gif/autoplay", HTTP_POST, handleAutoplay);
-    server->on("/gif/autoplay", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(200, "text/plain", autoPlay ? "1" : "0");
-    });
-
-    server->on("/gif", HTTP_POST, handlePlayGif);
+    configureApiConfig();
+    configureApiPanel();
+    configureApiGifs();
+    configureApiFiles();
+    configureApiTime();
 
     server->on("/text", HTTP_POST, handleTextRequest);
-
-    server->on("/time/show", HTTP_GET, [](AsyncWebServerRequest *request) {
-        target_state = SHOW_TIME;
-        interruptGif = true;
-        request->send(200, "text/plain");
-    });
-    server->on("/time/settings", HTTP_POST, handleTimeSettings);
-    server->on("/time/settings", HTTP_GET, handleGetTimeSettings);
-
-    server->on("/panel/brightness", HTTP_POST, handleBrightness);
-    server->on("/panel/brightness", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(200, "text/plain", String(config.brightness)); // TODO: Return whole config here
-    });
-
-    server->on("/files", listFiles);
-    server->on("/file/delete", deleteFile);
-    server->on("/file", handleFile);
-
-    server->on(
-        "/upload", HTTP_POST, [](AsyncWebServerRequest *request) {
-            request->send(200);
-        },
-        handleUpload);
-
-    server->on(
-        "/spiffs/upload", HTTP_POST, [](AsyncWebServerRequest *request) {
-            request->send(200);
-        },
-        handleSpiffsUpload);
-
-    server->on("/config/wifi", HTTP_POST, handleWifiConfig);
-
-    server->on("/wifi/scan", HTTP_GET, handleScanWifi);
-
-    server->on("/restart", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(200);
-        ESP.restart();
-    });
-
-    server->on("/ota", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(200, "text/plain", "Started OTA mode");
-
-        target_state = OTA_UPDATE;
-        interruptGif = true;
-    });
 
     server->on("/state", HTTP_GET, [](AsyncWebServerRequest *request) {
         if (!request->hasParam("state"))
@@ -455,8 +494,14 @@ void configureWebServer()
 
         request->send(200, "text/plain", "Changing state to: " + String(state));
 
-        target_state = (frame_status_t) state;
+        target_state = (frame_status_t)state;
         interruptGif = true;
+    });
+
+    server->on("/test", HTTP_GET, [](AsyncWebServerRequest *request) {
+
+
+        request->send(200, "text/plain", "Core: " + String(xPortGetCoreID()));
     });
 }
 

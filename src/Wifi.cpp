@@ -21,12 +21,9 @@ void setupWifi()
 {
     if (config.ssid != "")
     {
-        dma_display.println("Connecting to WIFI\n" + config.ssid);
         connect();
         return;
     }
-
-    dma_display.println("No SSID saved, creating AP");
 
     createAP();
 }
@@ -51,7 +48,7 @@ void connecting()
 {
     if (WiFi.status() == WL_CONNECTED)
     { // Successfully connected
-        target_state = PLAYING_ART;
+        // Set connected flag
         return;
     }
 
@@ -60,7 +57,7 @@ void connecting()
 
     if (millis() - connect_start > 10000)
     {
-        target_state = PLAYING_ART;
+        // Set AP flag
         createAP();
     }
 }

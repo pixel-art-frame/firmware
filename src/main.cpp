@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include <FS.h>
-#include <SD.h>
+#include "SdFat.h"
 #include <SPIFFS.h>
 #include <SPI.h>
 
@@ -61,6 +61,8 @@ unsigned long lastStateChange = 0;
 
 Config config;
 
+TaskHandle_t scheduled_task;
+
 void handleBrightness()
 {
   ShowGIF("/bulb.gif", true);
@@ -71,25 +73,37 @@ void handleBrightness()
   }
 }
 
-void handleScheduled()
+// TODO: Run this on a seperate core
+void handleScheduled(void *param)
 {
-  handleGifQueue();
-  countTotalFiles();
+  setupWifi();
 
-  // Time
-  if (config.enableTime)
+  initServer();
+
+  setupNTPClient();
+
+  for (;;)
   {
-    if (millis() - lastTimeShow > config.timeInterval * 1000)
+    handleGifQueue();
+
+    // Time
+    if (config.enableTime)
     {
-      lastTimeShow = millis();
-      target_state = SHOW_TIME;
+      if (millis() - lastTimeShow > config.timeInterval * 1000)
+      {
+        lastTimeShow = millis();
+        target_state = SHOW_TIME;
+      }
+
+      // Update time2 secs before we should show it
+      if ((millis() + 2000) - lastTimeShow > config.timeInterval * 1000)
+      {
+        Serial.println("updating time");
+        updateTime();
+      }
     }
 
-    // Update time2 secs before we should show it
-    if ((millis() + 2000) - lastTimeShow > config.timeInterval * 1000)
-    {
-      updateTime();
-    }
+    vTaskDelay(1 / portTICK_PERIOD_MS); // https://github.com/espressif/esp-idf/issues/1646#issue-299097720
   }
 }
 
@@ -111,6 +125,13 @@ void setup()
 
   sd_ready = SD.begin(CS, sd_spi);
 
+  if (!sd_ready)
+  {
+    Serial.println("SD not ready");
+    ESP.restart();
+    return;
+  }
+
   if (!SPIFFS.begin())
   {
     Serial.println("An Error has occurred while mounting SPIFFS");
@@ -129,13 +150,29 @@ void setup()
 
   InitMatrixGif(&virtualDisp);
 
-  setupWifi();
+  xTaskCreatePinnedToCore(
+      handleScheduled, /* Function to implement the task */
+      "schedule",      /* Name of the task */
+      10000,           /* Stack size in words */
+      NULL,            /* Task input parameter */
+      0,               /* Priority of the task */
+      &scheduled_task, /* Task handle. */
+      0);              /* Core where the task should run */
+}
 
-  initServer();
+void handleStartup()
+{
+  virtualDisp.clearScreen();
+  virtualDisp.println("Pixel Art Frame");
+  // TODO: Show boot logo
 
-  setupNTPClient();
+  delay(5000);
 
-  target_state = PLAYING_ART;
+  if (frame_state == STARTUP)
+  {
+    Serial.println("Chanting to art after startup");
+    target_state = PLAYING_ART;
+  }
 }
 
 void handleSdError()
@@ -156,13 +193,16 @@ bool targetStateValid()
     return false;
   }
 
+  if (frame_state == INDEXING && target_state != PLAYING_ART) {
+    Serial.println("Invalid target state while indexing");
+    return false;
+  }
+
   return true;
 }
 
 void loop()
 {
-  handleScheduled();
-
   if (!sd_ready)
   {
     handleSdError();
@@ -171,6 +211,7 @@ void loop()
   if (!gifPlaying && target_state != frame_state && targetStateValid())
   {
     frame_state = target_state;
+    Serial.println("Changed state to: " + String(frame_state));
     lastStateChange = millis();
   }
 
@@ -178,6 +219,11 @@ void loop()
   {
     virtualDisp.fillScreen(dma_display.color565(0, 0, 0));
     displayClear = true;
+  }
+
+  if (frame_state == STARTUP)
+  {
+    handleStartup();
   }
 
   if (frame_state == PLAYING_ART)
@@ -193,6 +239,14 @@ void loop()
   if (frame_state == SHOW_TIME)
   {
     handleTime();
+  }
+
+  if (frame_state == INDEXING)
+  {
+    virtualDisp.clearScreen();
+    virtualDisp.setCursor(0, 0);
+    virtualDisp.println("Indexing\nFiles: " + String(total_files));
+    delay(200);
   }
 
   if (frame_state == CONNECT_WIFI)

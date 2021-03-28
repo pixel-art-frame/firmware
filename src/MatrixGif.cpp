@@ -161,8 +161,8 @@ int32_t GIFSeekFile(GIFFILE *pFile, int32_t iPosition)
   File *f = static_cast<File *>(pFile->fHandle);
   f->seek(iPosition);
   pFile->iPos = (int32_t)f->position();
-  // i = micros() - i;
-  //Serial.printf("Seek time = %d us\n", i);
+  //  i = micros() - i;
+  // Serial.printf("Seek time = %d us\n", i);
   return pFile->iPos;
 } /* GIFSeekFile() */
 

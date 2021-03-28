@@ -1,10 +1,13 @@
 #ifndef _GLOBAL_
 #define _GLOBAL_
 
+#include <queue>
 #include <FS.h>
 #include <ESP32-VirtualMatrixPanel-I2S-DMA.h>
 #include "Configuration.hpp"
 #include "MatrixText.hpp"
+
+#define GIF_DIR "/gifs"
 
 typedef enum {
     OFF = 0, // LED matrix is off
@@ -13,6 +16,7 @@ typedef enum {
     SHOW_TIME,
     STARTUP,
 
+    INDEXING,
     CONNECT_WIFI, // Connecting to WiFi
     ADJ_BRIGHTNESS, // Adjusting brightness
 
@@ -40,5 +44,7 @@ extern int brightness;
 extern bool autoPlay;
 extern bool gifPlaying;
 extern bool queue_populate_requred;
+extern unsigned long total_files;
+extern String current_gif;
 
 #endif
