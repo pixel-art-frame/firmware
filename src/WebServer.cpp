@@ -9,8 +9,10 @@
 #include "GifPlayer.hpp"
 #include "Configuration.hpp"
 #include "MatrixText.hpp"
+#include "Api/FilesApi.hpp"
+#include "Api/PanelApi.hpp"
+#include "Api/ConfigApi.hpp"
 
-#define FILES_PAGINATION_SIZE 25
 
 const char default_index[] PROGMEM = R"rawliteral(
 <!DOCTYPE HTML>
@@ -28,6 +30,10 @@ const char default_index[] PROGMEM = R"rawliteral(
 )rawliteral";
 
 AsyncWebServer *server;
+FilesApi filesApi;
+PanelApi panelApi;
+ConfigApi configApi;
+
 
 // Make size of files human readable
 // source: https://github.com/CelliesProjects/minimalUploadAuthESP32
@@ -41,91 +47,6 @@ String humanReadableSize(const size_t bytes)
         return String(bytes / 1024.0 / 1024.0) + " MB";
     else
         return String(bytes / 1024.0 / 1024.0 / 1024.0) + " GB";
-}
-
-String translateEncryptionType(wifi_auth_mode_t encryptionType)
-{
-    switch (encryptionType)
-    {
-    case (0):
-        return "Open";
-    case (1):
-        return "WEP";
-    case (2):
-        return "WPA_PSK";
-    case (3):
-        return "WPA2_PSK";
-    case (4):
-        return "WPA_WPA2_PSK";
-    case (5):
-        return "WPA2_ENTERPRISE";
-    default:
-        return "UNKOWN";
-    }
-}
-
-void handleScanWifi(AsyncWebServerRequest *request)
-{
-    int16_t n = WiFi.scanNetworks();
-
-    String jsonResponse = "[";
-
-    for (int i = 0; i < n; i++)
-    {
-        jsonResponse += "{\"ssid\": \"" + WiFi.SSID(i) + "\", \"rssi\": \"" + WiFi.RSSI(i) + "\", \"auth\": \"" + translateEncryptionType(WiFi.encryptionType(i)) + "\"}";
-
-        if (i < (n - 1))
-            jsonResponse += ",";
-    }
-
-    jsonResponse += "]";
-
-    request->send(200, "application/json", jsonResponse);
-}
-
-void handleWifiConfig(AsyncWebServerRequest *request)
-{
-    Serial.println("Wifi config");
-
-    if (!request->hasParam("ssid") || !request->hasParam("pass"))
-    {
-        request->send(400, "text/plain", "Missing parameter(s): ssid, value");
-        return;
-    }
-
-    config.ssid = request->getParam("ssid")->value();
-    config.pass = request->getParam("pass")->value();
-    saveSettings();
-
-    request->send(200, "text/plain", "Restart to apply changes");
-}
-
-void handleBrightness(AsyncWebServerRequest *request)
-{
-    Serial.println("set panel brightness");
-
-    if (!request->hasParam("value"))
-    {
-        request->send(400, "text/plain", "Missing parameter: value");
-        return;
-    }
-
-    int value = atoi(request->getParam("value")->value().c_str());
-
-    if (value <= 1 || value >= 255)
-    {
-        request->send(400, "invalid value");
-        return;
-    }
-
-    config.brightness = value;
-    saveSettings();
-    dma_display.setPanelBrightness(config.brightness);
-    interruptGif = true;
-
-    target_state = ADJ_BRIGHTNESS;
-
-    request->send(200, "text/plain", String(config.brightness));
 }
 
 void handleAutoplay(AsyncWebServerRequest *request)
@@ -160,51 +81,6 @@ void handlePlayGif(AsyncWebServerRequest *request)
     setGif(fileName);
 
     request->send(400, "text/plain", "File not found");
-}
-
-File paginationFile;
-int page = 1;
-
-void listFiles(AsyncWebServerRequest *request)
-{
-    if (request->hasParam("firstPage") && paginationFile)
-    {
-        paginationFile.close();
-    }
-
-    if (!paginationFile)
-    {
-        page = 1;
-        paginationFile = SD.open(GIF_DIR);
-    }
-    else
-    {
-        page++;
-    }
-
-    int maxPage = (total_files / FILES_PAGINATION_SIZE) + 1;
-
-    if (page > maxPage)
-        page = maxPage;
-
-    String jsonResponse = "{\"page\":" + String(page) + ",\"pageSize\":" + String(FILES_PAGINATION_SIZE) + ",\"files\":[";
-
-    for (int i = 0; i < FILES_PAGINATION_SIZE; i++)
-    {
-        File f = paginationFile.openNextFile();
-
-        if (!f)
-        {
-            paginationFile.close();
-            break;
-        }
-
-        jsonResponse += "\"" + String(f.name()) + "\",";
-
-        f.close();
-    }
-
-    request->send(200, "application/json", jsonResponse.substring(0, jsonResponse.length() - 1) + "]}");
 }
 
 // handles uploads, source: https://github.com/smford/esp32-asyncwebserver-fileupload-example
@@ -270,46 +146,6 @@ void handleSpiffsUpload(AsyncWebServerRequest *request, String filename, size_t 
         Serial.println(logmessage);
         request->redirect("/");
     }
-}
-
-void handleFile(AsyncWebServerRequest *request)
-{
-    if (!request->hasParam("name"))
-    {
-        request->send(400, "text/plain", "Missing parameter: name");
-        return;
-    }
-
-    const char *fileName = request->getParam("name")->value().c_str();
-
-    if (!SD.exists(fileName))
-    {
-        request->send(400, "text/plain", "File does not exist");
-        return;
-    }
-
-    request->send(SD, fileName, "application/octet-stream");
-}
-
-void deleteFile(AsyncWebServerRequest *request)
-{
-    if (!request->hasParam("name"))
-    {
-        request->send(400, "text/plain", "Missing parameter: name");
-        return;
-    }
-
-    const char *fileName = request->getParam("name")->value().c_str();
-
-    if (!SD.exists(fileName))
-    {
-        request->send(400, "text/plain", "File does not exist");
-        return;
-    }
-
-    SD.remove(fileName);
-    total_files--;
-    request->send(200, "text/plain", "Deleted File: " + String(fileName));
 }
 
 void handleTextRequest(AsyncWebServerRequest *request)
@@ -409,17 +245,18 @@ void configureApiTime()
 
 void configureApiPanel()
 {
-    server->on("/panel/brightness", HTTP_POST, handleBrightness);
+    server->on("/panel/brightness", HTTP_POST, [](AsyncWebServerRequest *request) { panelApi.handleBrightness(request); });
+
     server->on("/panel/brightness", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(200, "text/plain", String(config.brightness)); // TODO: Return whole config here
+        request->send(200, "text/plain", String(config.brightness));
     });
 }
 
 void configureApiFiles()
 {
-    server->on("/files", listFiles);
-    server->on("/file/delete", deleteFile);
-    server->on("/file", handleFile);
+    server->on("/files", HTTP_GET, [](AsyncWebServerRequest *request) { filesApi.listFiles(request); });
+    server->on("/file/delete", HTTP_GET, [](AsyncWebServerRequest *request) { filesApi.deleteFile(request); });
+    server->on("/file", HTTP_GET, [](AsyncWebServerRequest *request) { filesApi.handleFile(request); });
 
     server->on(
         "/upload", HTTP_POST, [](AsyncWebServerRequest *request) {
@@ -436,9 +273,9 @@ void configureApiFiles()
 
 void configureApiConfig()
 {
-    server->on("/config/wifi", HTTP_POST, handleWifiConfig);
+    server->on("/config/wifi", HTTP_POST, [](AsyncWebServerRequest *request) {  configApi.handleWifiConfig(request); });
 
-    server->on("/wifi/scan", HTTP_GET, handleScanWifi);
+    server->on("/wifi/scan", HTTP_GET, [](AsyncWebServerRequest *request) {  configApi.handleScanWifi(request); });
 
     server->on("/restart", HTTP_GET, [](AsyncWebServerRequest *request) {
         request->send(200);

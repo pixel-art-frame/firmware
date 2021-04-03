@@ -9,7 +9,6 @@
 
 #define MAX_QUEUED_GIFS 32
 
-load_strategy_t strategy = INDEXED;
 Sequential sequentialGifLoader;
 Indexed indexedGifLoader;
 
@@ -39,20 +38,20 @@ void resetGifLoader()
  */
 void populateGifQueue()
 {
-
     String loadedFile = "";
 
-    if (strategy == SEQUENTIAL)
+    if (config.loadStrategy == SEQUENTIAL)
     {
         loadedFile = sequentialGifLoader.loadNextFile();
     }
 
-    if (strategy == INDEXED)
+    if (config.loadStrategy == INDEXED)
     {
         loadedFile = indexedGifLoader.loadNextFile();
     }
 
-    if (loadedFile == "") {
+    if (loadedFile == "")
+    {
         return;
     }
 

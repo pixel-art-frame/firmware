@@ -1,6 +1,7 @@
 #ifndef _GIFLOADER_
 #define _GIFLOADER_
 
+
 typedef enum {
     // Files are loaded one by one from the root.  
     SEQUENTIAL = 0,  
@@ -15,6 +16,7 @@ typedef enum {
     INDEXED
 
 } load_strategy_t;
+
 
 bool queueEmpty();
 void countTotalFiles();

@@ -7,11 +7,14 @@
 #define AUTOPLAY_KEY "autoplay"
 #define SSID_KEY "ssid"
 #define PASS_KEY "pass"
+
 #define ENABLE_TIME_KEY "enable_time"
 #define TIME_SECONDS_KEY "time_seconds"
 #define TIME_INTERVAL_KEY "time_interval"
 #define TIME_OFFSET_KEY "time_offset"
 #define NTP_SERVER_KEY "ntp_server"
+
+#define GIF_LOAD_STRATEGY_KEY "gif_load_strategy"
 
 void loadSettings()
 {
@@ -35,6 +38,8 @@ void loadSettings()
   config.timeShowSeconds = doc[TIME_SECONDS_KEY] | 5000;
   config.timeOffset = doc[TIME_OFFSET_KEY] | 0;
 
+  config.loadStrategy = doc[GIF_LOAD_STRATEGY_KEY] | INDEXED;
+
   configFile.close();
 }
 
@@ -52,6 +57,7 @@ void saveSettings()
   doc[TIME_SECONDS_KEY] = config.timeShowSeconds;
   doc[TIME_OFFSET_KEY] = config.timeOffset;
   doc[NTP_SERVER_KEY] = config.ntpServer;
+  doc[GIF_LOAD_STRATEGY_KEY] = config.loadStrategy;
 
   if (SPIFFS.exists(CONFIG_FILENAME))
   {

@@ -42,6 +42,7 @@
         "cinttypes": "cpp",
         "regex": "cpp",
         "utility": "cpp",
-        "typeinfo": "cpp"
+        "typeinfo": "cpp",
+        "queue": "cpp"
     }
 }

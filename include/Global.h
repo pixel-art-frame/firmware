@@ -9,6 +9,10 @@
 
 #define GIF_DIR "/gifs"
 
+#define INDEX_FILENAME_PREFIX "index."
+#define INDEX_DIRECTORY "/.index"
+#define INDEX_SIZE 250
+
 typedef enum {
     OFF = 0, // LED matrix is off
     PLAYING_ART, // Looping trough art

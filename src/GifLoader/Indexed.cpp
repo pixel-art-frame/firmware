@@ -1,9 +1,5 @@
 #include "GifLoader/Indexed.hpp"
 
-#define INDEX_FILENAME_PREFIX "index."
-#define INDEX_DIRECTORY "/.index"
-#define INDEX_SIZE 250
-
 String Indexed::generateIndexFilename(int index = 0)
 {
     return String(INDEX_DIRECTORY) + "/" + String(INDEX_FILENAME_PREFIX) + String(index);
@@ -34,52 +30,58 @@ String getValue(String data, char separator, int index)
     return found > index ? data.substring(strIndex[0], strIndex[1]) : "";
 }
 
-// Read random item from the index
-String Indexed::loadNextFile()
+std::vector<String> Indexed::readIndexFile(File *indexFile)
 {
-    Serial.println("Loading next file");
-    if (!indexesLoaded)
-    {
-        Serial.println("Loading indexes");
-        loadIndexes();
-    }
-
-    if (indexing || indexingRequired())
-    {
-        Serial.println("Indexing or indexing required!");
-        index();
-        return "";
-    }
-
-Serial.println("Reading random file from index");
-
-    int index = random(0, indexes.size());
-
-    File indexFile = SD.open(indexes.at(index));
-    String content = indexFile.readString();
-    String line = "";
     std::vector<String> files;
+    String content = indexFile->readString();
+    String line = "";
 
     for (int i = 0; i < INDEX_SIZE; i++)
     {
         line = getValue(content, '\n', i);
 
-        if (line == ""){
+        if (line == "")
+        {
             break;
         }
 
         files.push_back(line);
     }
 
+    return files;
+}
+
+// Read random item from the index
+String Indexed::loadNextFile()
+{
+    Serial.println("Loading next file");
+    if (!indexesLoaded)
+    {
+        loadIndexes();
+    }
+
+    if (indexing || indexingRequired())
+    {
+        index();
+        return "";
+    }
+
+    int index = random(0, indexes.size());
+
+    File indexFile = SD.open(indexes.at(index));
+
+    std::vector<String> files = readIndexFile(&indexFile);
+
     int randomFile = random(0, files.size());
     String f = files.at(randomFile);
     f.trim();
     f.replace("\n", "");
-    
+
+    indexFile.close();
+
     Serial.println("Returning file " + f);
     return f;
 }
-
 
 void Indexed::writeIndex()
 {
@@ -210,7 +212,12 @@ void Indexed::index()
     }
 
     String nextFileName = String(nextFile.name());
-    // Add to current index
+
+    if (!nextFileName.endsWith(".gif"))
+    {
+        nextFile.close();
+        return;
+    }
 
     indexFiles.push_back(nextFileName);
     Serial.println("Added to current index: " + nextFileName + " Indexed files: " + String(indexFiles.size()));

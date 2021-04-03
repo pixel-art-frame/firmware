@@ -2,6 +2,7 @@
 #define _CONFIGURATION_
 
 #include <WiFi.h>
+#include "GifLoader.hpp"
 
 #define CONFIG_FILENAME "/config.json"
 #define CONFIG_SIZE 512
@@ -20,6 +21,8 @@ struct Config
   int timeShowSeconds;
   int timeOffset;
   String ntpServer;
+
+  load_strategy_t loadStrategy;
 };
 
 void loadSettings();

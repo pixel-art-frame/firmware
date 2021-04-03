@@ -73,7 +73,6 @@ void handleBrightness()
   }
 }
 
-// TODO: Run this on a seperate core
 void handleScheduled(void *param)
 {
   setupWifi();
@@ -103,37 +102,23 @@ void handleScheduled(void *param)
       }
     }
 
-    vTaskDelay(1 / portTICK_PERIOD_MS); // https://github.com/espressif/esp-idf/issues/1646#issue-299097720
+    vTaskDelay(10 / portTICK_PERIOD_MS); // https://github.com/espressif/esp-idf/issues/1646#issue-299097720
   }
 }
 
 void setup()
 {
   Serial.begin(115200);
-  Serial.println("Starting Pixel Art Frame");
 
-  if (!SPIFFS.begin(true))
-  {
-    Serial.println("An Error has occurred while mounting SPIFFS");
-  }
-
-  Serial.println("Loading configuration");
   loadSettings();
 
-  Serial.println("Init SD");
   sd_spi.begin(SCK, MISO, MOSI, CS);
 
   sd_ready = SD.begin(CS, sd_spi);
 
-  if (!sd_ready)
-  {
-    Serial.println("SD not ready");
-    ESP.restart();
-    return;
-  }
-
   if (!SPIFFS.begin())
   {
+    // TODO: Handle this
     Serial.println("An Error has occurred while mounting SPIFFS");
   }
 
@@ -194,7 +179,6 @@ bool targetStateValid()
   }
 
   if (frame_state == INDEXING && target_state != PLAYING_ART) {
-    Serial.println("Invalid target state while indexing");
     return false;
   }
 
@@ -206,12 +190,12 @@ void loop()
   if (!sd_ready)
   {
     handleSdError();
+    return;
   }
 
   if (!gifPlaying && target_state != frame_state && targetStateValid())
   {
     frame_state = target_state;
-    Serial.println("Changed state to: " + String(frame_state));
     lastStateChange = millis();
   }
 
