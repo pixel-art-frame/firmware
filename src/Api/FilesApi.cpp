@@ -2,14 +2,18 @@
 
 void FilesApi::listFiles(AsyncWebServerRequest *request)
 {
+    Serial.print("list files ");
     if (config.loadStrategy == SEQUENTIAL)
     {
+        Serial.println("sequential");
         listFilesSequential(request);
     }
 
     if (config.loadStrategy == INDEXED)
     {
-        // listFilesIndexed(request, globIndexedGifLoader);
+        Serial.println("indexed");
+
+        listFilesIndexed(request);
     }
 }
 
@@ -57,17 +61,24 @@ void FilesApi::listFilesSequential(AsyncWebServerRequest *request)
 
 void FilesApi::listFilesIndexed(AsyncWebServerRequest *request)
 {
+    Serial.println("list files indexed");
     int maxPage = indexed.getIndexes().size();
+    
+    Serial.println("max page: " + String(maxPage));
 
-    if (page > maxPage || request->hasParam("firstPage"))
+    if (page >= maxPage || request->hasParam("firstPage"))
     {
+        Serial.println("Resetting to page 1");
         page = 1;
     }
 
     String indexFilePath = indexed.getIndexes().at(page);
+    Serial.println("Index file: " + indexFilePath);
     File indexFile = SD.open(indexFilePath);
-
+    Serial.println("Opened index file");
     std::vector<String> files = indexed.readIndexFile(&indexFile);
+
+    Serial.println("Reading lines, count: " + String(files.size()));
 
     String jsonResponse = "{\"page\":" + String(page) + ",\"pageSize\":" + String(INDEX_SIZE) + ",\"files\":[";
 
@@ -77,6 +88,7 @@ void FilesApi::listFilesIndexed(AsyncWebServerRequest *request)
     }
 
     indexFile.close();
+    page++;
 
     request->send(200, "application/json", jsonResponse.substring(0, jsonResponse.length() - 1) + "]}");
 }
@@ -119,4 +131,26 @@ void FilesApi::handleFile(AsyncWebServerRequest *request)
     }
 
     request->send(SD, fileName, "application/octet-stream");
+}
+
+void FilesApi::resetIndex(AsyncWebServerRequest *request)
+{
+    if (config.loadStrategy != INDEXED) {
+        request->send(400, "text/plain", "Load strategy not set to indexed");
+        return;
+    }
+
+    Indexed indexed;
+    auto indexes = indexed.getIndexes();
+    for (int i = 0; i < indexes.size(); i++) {
+        SD.remove(indexes.at(i));
+        Serial.println("Deleted " + indexes.at(i));
+    }
+
+    if (SD.exists(INDEX_DIRECTORY)) {
+        SD.rmdir(INDEX_DIRECTORY);
+        Serial.println("Removed index dir");
+    }
+
+    request->send(200, "text/plain", "Indexes deleted");
 }

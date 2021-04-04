@@ -24,7 +24,7 @@ protected:
 
     std::vector<String> indexFiles;
     File curDirectory;
-    std::stack<File> directories;
+    std::stack<String> directories;
     int currentIndex = 0;
 
     std::vector<String> indexes;

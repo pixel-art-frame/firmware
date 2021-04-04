@@ -254,9 +254,10 @@ void configureApiPanel()
 
 void configureApiFiles()
 {
-    server->on("/files", HTTP_GET, [](AsyncWebServerRequest *request) { filesApi.listFiles(request); });
+    server->on("/files", HTTP_GET, [](AsyncWebServerRequest *request) { Serial.println("Returning files"); filesApi.listFiles(request); });
     server->on("/file/delete", HTTP_GET, [](AsyncWebServerRequest *request) { filesApi.deleteFile(request); });
     server->on("/file", HTTP_GET, [](AsyncWebServerRequest *request) { filesApi.handleFile(request); });
+    server->on("/reset-index", HTTP_GET, [](AsyncWebServerRequest *request) { filesApi.resetIndex(request); });
 
     server->on(
         "/upload", HTTP_POST, [](AsyncWebServerRequest *request) {

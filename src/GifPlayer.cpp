@@ -31,7 +31,8 @@ void setGif(String gif)
 void handleGif()
 {
     if (queueEmpty()) {
-        ShowGIF(DEFAULT_GIF, true);
+        return;
+       // ShowGIF(DEFAULT_GIF, true);
     }
 
     if (current_gif.length() == 0) {

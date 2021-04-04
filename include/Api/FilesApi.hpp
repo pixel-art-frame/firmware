@@ -13,8 +13,9 @@ public:
     void listFiles(AsyncWebServerRequest *request);
     void deleteFile(AsyncWebServerRequest *request);
     void handleFile(AsyncWebServerRequest *request);
+    void resetIndex(AsyncWebServerRequest *request);
 
-private:
+private: 
     void listFilesSequential(AsyncWebServerRequest *request);
     void listFilesIndexed(AsyncWebServerRequest *request);
 

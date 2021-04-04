@@ -102,7 +102,7 @@ void handleScheduled(void *param)
       }
     }
 
-    vTaskDelay(10 / portTICK_PERIOD_MS); // https://github.com/espressif/esp-idf/issues/1646#issue-299097720
+    vTaskDelay(1 / portTICK_PERIOD_MS); // https://github.com/espressif/esp-idf/issues/1646#issue-299097720
   }
 }
 
@@ -115,6 +115,14 @@ void setup()
   sd_spi.begin(SCK, MISO, MOSI, CS);
 
   sd_ready = SD.begin(CS, sd_spi);
+
+  if (!sd_ready) {
+    Serial.println("SD failed");
+    ESP.restart();
+    return;
+  }
+
+  Serial.println("SD card ready");
 
   if (!SPIFFS.begin())
   {
@@ -153,9 +161,9 @@ void handleStartup()
 
   delay(5000);
 
-  if (frame_state == STARTUP)
+  if (frame_state == STARTUP && (frame_state != INDEXING && target_state != INDEXING))
   {
-    Serial.println("Chanting to art after startup");
+    Serial.println("Chanting to art after startup, frame state: " + String(frame_state) + " target state: " + String(target_state));
     target_state = PLAYING_ART;
   }
 }

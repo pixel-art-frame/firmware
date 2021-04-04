@@ -39,7 +39,6 @@ std::vector<String> Indexed::readIndexFile(File *indexFile)
     for (int i = 0; i < INDEX_SIZE; i++)
     {
         line = getValue(content, '\n', i);
-
         if (line == "")
         {
             break;
@@ -54,7 +53,6 @@ std::vector<String> Indexed::readIndexFile(File *indexFile)
 // Read random item from the index
 String Indexed::loadNextFile()
 {
-    Serial.println("Loading next file");
     if (!indexesLoaded)
     {
         loadIndexes();
@@ -72,14 +70,16 @@ String Indexed::loadNextFile()
 
     std::vector<String> files = readIndexFile(&indexFile);
 
-    int randomFile = random(0, files.size());
+    if (files.size() == 0)
+        return "";
+
+    int randomFile = random(0, (files.size() - 1));
     String f = files.at(randomFile);
     f.trim();
     f.replace("\n", "");
 
     indexFile.close();
 
-    Serial.println("Returning file " + f);
     return f;
 }
 
@@ -87,11 +87,8 @@ void Indexed::writeIndex()
 {
     String fullPath = generateIndexFilename(currentIndex);
 
-    Serial.println("Writing index to file " + fullPath + " file count " + String(indexFiles.size()));
-
     if (SD.exists(fullPath))
     {
-        Serial.println("Index already exists, deleting");
         SD.remove(fullPath);
     }
 
@@ -99,7 +96,6 @@ void Indexed::writeIndex()
 
     for (int i = 0; i < indexFiles.size(); i++)
     {
-        Serial.println("Added file " + String(i) + " to index: " + indexFiles.at(i));
         indexFile.println(indexFiles.at(i));
     }
 
@@ -113,7 +109,6 @@ void Indexed::writeIndex()
 
 void Indexed::loadIndexes()
 {
-    Serial.println("Loading indexes");
     if (!SD.exists(INDEX_DIRECTORY))
     {
         return;
@@ -130,29 +125,25 @@ void Indexed::loadIndexes()
             break;
         }
 
-        Serial.println("Found file: " + String(indexFile.name()));
-
         indexes.push_back(String(indexFile.name()));
 
         indexFile.close();
     }
 
-    Serial.println("Indexes loaded!");
-
     indexesLoaded = true;
 }
 
+unsigned long timer = 0;
+
 void Indexed::index()
 {
-    Serial.println("Indexing");
+    timer = millis();
     target_state = INDEXING;
 
     if (!curDirectory)
     {
         if (total_files > 0)
-            while (true)
-                ;
-        Serial.println("Start, loading root");
+            Serial.println("Start, loading root");
 
         curDirectory = loadRoot();
 
@@ -169,30 +160,31 @@ void Indexed::index()
         indexing = true;
         total_files = 0;
         indexFiles.clear();
+        while (!directories.empty())
+            directories.pop();
     }
-
-    Serial.println("Opening next file from dir " + String(curDirectory.name()));
 
     File nextFile = curDirectory.openNextFile();
 
     if (!nextFile)
     {
-        Serial.println("No more files");
+        Serial.println("No more files in dir, closing " + String(curDirectory.name()));
 
+        nextFile.close();
         curDirectory.close();
 
         if (!directories.empty())
         {
-            curDirectory = directories.top();
+            String nextDir = directories.top();
+            curDirectory = SD.open(nextDir);
             directories.pop();
 
-            Serial.println("We were in a subdirectory, going back to " + String(curDirectory.name()));
             return;
         }
 
-        writeIndex();
+        if (indexFiles.size() > 0)
+            writeIndex();
 
-        Serial.println("Indexing done!");
         target_state = PLAYING_ART;
         indexing = false;
 
@@ -201,18 +193,14 @@ void Indexed::index()
 
     if (nextFile.isDirectory())
     {
-        File curDir = curDirectory;
-        directories.push(curDir);
+        String dirName = nextFile.name();
+        directories.push(dirName);
 
-        curDirectory = nextFile;
-
-        Serial.println("Found directory " + String(curDirectory.name()));
-
+        nextFile.close();
         return;
     }
 
     String nextFileName = String(nextFile.name());
-
     if (!nextFileName.endsWith(".gif"))
     {
         nextFile.close();
@@ -220,13 +208,13 @@ void Indexed::index()
     }
 
     indexFiles.push_back(nextFileName);
-    Serial.println("Added to current index: " + nextFileName + " Indexed files: " + String(indexFiles.size()));
     total_files++;
-
     nextFile.close();
 
     if (indexFiles.size() >= INDEX_SIZE)
     {
         writeIndex();
     }
+
+    Serial.println("    " + nextFileName + " - " + String(millis() - timer) + "ms");
 }
