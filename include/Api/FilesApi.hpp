@@ -14,7 +14,7 @@ public:
     void deleteFile(AsyncWebServerRequest *request);
     void handleFile(AsyncWebServerRequest *request);
     void resetIndex(AsyncWebServerRequest *request);
-
+    void countIndex(AsyncWebServerRequest *request) { request->send(200, "text/plain", String(indexed.getIndexes().size()-1)); }
 private: 
     void listFilesSequential(AsyncWebServerRequest *request);
     void listFilesIndexed(AsyncWebServerRequest *request);

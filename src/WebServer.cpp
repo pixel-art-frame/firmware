@@ -13,7 +13,6 @@
 #include "Api/PanelApi.hpp"
 #include "Api/ConfigApi.hpp"
 
-
 const char default_index[] PROGMEM = R"rawliteral(
 <!DOCTYPE HTML>
 <html lang="en">
@@ -33,7 +32,6 @@ AsyncWebServer *server;
 FilesApi filesApi;
 PanelApi panelApi;
 ConfigApi configApi;
-
 
 // Make size of files human readable
 // source: https://github.com/CelliesProjects/minimalUploadAuthESP32
@@ -254,10 +252,14 @@ void configureApiPanel()
 
 void configureApiFiles()
 {
-    server->on("/files", HTTP_GET, [](AsyncWebServerRequest *request) { Serial.println("Returning files"); filesApi.listFiles(request); });
+    server->on("/files", HTTP_GET, [](AsyncWebServerRequest *request) { filesApi.listFiles(request); });
+
     server->on("/file/delete", HTTP_GET, [](AsyncWebServerRequest *request) { filesApi.deleteFile(request); });
     server->on("/file", HTTP_GET, [](AsyncWebServerRequest *request) { filesApi.handleFile(request); });
-    server->on("/reset-index", HTTP_GET, [](AsyncWebServerRequest *request) { filesApi.resetIndex(request); });
+
+    server->on("/index/reset", HTTP_GET, [](AsyncWebServerRequest *request) { filesApi.resetIndex(request); });
+    server->on("/index/count", HTTP_GET, [](AsyncWebServerRequest *request) { filesApi.countIndex(request); });
+    server->serveStatic("/index", SD, INDEX_DIRECTORY);
 
     server->on(
         "/upload", HTTP_POST, [](AsyncWebServerRequest *request) {
@@ -274,9 +276,9 @@ void configureApiFiles()
 
 void configureApiConfig()
 {
-    server->on("/config/wifi", HTTP_POST, [](AsyncWebServerRequest *request) {  configApi.handleWifiConfig(request); });
+    server->on("/config/wifi", HTTP_POST, [](AsyncWebServerRequest *request) { configApi.handleWifiConfig(request); });
 
-    server->on("/wifi/scan", HTTP_GET, [](AsyncWebServerRequest *request) {  configApi.handleScanWifi(request); });
+    server->on("/wifi/scan", HTTP_GET, [](AsyncWebServerRequest *request) { configApi.handleScanWifi(request); });
 
     server->on("/restart", HTTP_GET, [](AsyncWebServerRequest *request) {
         request->send(200);
@@ -337,8 +339,6 @@ void configureWebServer()
     });
 
     server->on("/test", HTTP_GET, [](AsyncWebServerRequest *request) {
-
-
         request->send(200, "text/plain", "Core: " + String(xPortGetCoreID()));
     });
 }
