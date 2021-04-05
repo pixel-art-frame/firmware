@@ -61,36 +61,56 @@ void FilesApi::listFilesSequential(AsyncWebServerRequest *request)
 
 void FilesApi::listFilesIndexed(AsyncWebServerRequest *request)
 {
-    Serial.println("list files indexed");
-    int maxPage = indexed.getIndexes().size();
-    
-    Serial.println("max page: " + String(maxPage));
+    int maxPage = (indexed.getIndexes().size() * INDEX_SIZE) / FILES_PAGINATION_SIZE;
 
     if (page >= maxPage || request->hasParam("firstPage"))
     {
-        Serial.println("Resetting to page 1");
-        page = 1;
+        page = 0;
     }
 
-    String indexFilePath = indexed.getIndexes().at(page);
-    Serial.println("Index file: " + indexFilePath);
-    File indexFile = SD.open(indexFilePath);
-    Serial.println("Opened index file");
-    std::vector<String> files = indexed.readIndexFile(&indexFile);
+    int start = page * FILES_PAGINATION_SIZE;
+    int index = start / INDEX_SIZE;
 
-    Serial.println("Reading lines, count: " + String(files.size()));
+    int indexStart = start % 250;
+    int indexEnd = indexStart + FILES_PAGINATION_SIZE;
 
-    String jsonResponse = "{\"page\":" + String(page) + ",\"pageSize\":" + String(INDEX_SIZE) + ",\"files\":[";
-
-    for (int i = 0; i < files.size(); i++)
+    if (index >= indexed.getIndexes().size())
     {
-        jsonResponse += "\"" + files.at(i) + "\",";
+        request->send(400, "text/plain", "Invalid index");
+        return;
     }
 
-    indexFile.close();
+    String indexFilePath = indexed.getIndexes().at(index);
+    File indexFile = SD.open(indexFilePath);
+    auto files = indexed.readIndexFile(&indexFile);
+    int pageSize = FILES_PAGINATION_SIZE;
+
+    if (indexEnd >= files.size())
+    {
+        indexEnd = files.size();
+        pageSize = indexEnd - indexStart;
+    }
+
+    String jsonResponse = "{\"page\":" + String(page) + ",\"pageSize\":" + String(pageSize) + ",\"files\":[";
+
+    for (int i = indexStart; i < indexEnd; i++)
+    {
+        jsonResponse += "\"" + files.at(i) + "\"";
+
+        if (i < 24)
+        {
+            jsonResponse += +",";
+        }
+    }
+
+    if (indexFile)
+        indexFile.close();
+
     page++;
 
-    request->send(200, "application/json", jsonResponse.substring(0, jsonResponse.length() - 1) + "]}");
+    jsonResponse += "]}";
+
+    request->send(200, "application/json", jsonResponse);
 }
 
 void FilesApi::deleteFile(AsyncWebServerRequest *request)
@@ -135,19 +155,22 @@ void FilesApi::handleFile(AsyncWebServerRequest *request)
 
 void FilesApi::resetIndex(AsyncWebServerRequest *request)
 {
-    if (config.loadStrategy != INDEXED) {
+    if (config.loadStrategy != INDEXED)
+    {
         request->send(400, "text/plain", "Load strategy not set to indexed");
         return;
     }
 
     Indexed indexed;
     auto indexes = indexed.getIndexes();
-    for (int i = 0; i < indexes.size(); i++) {
+    for (int i = 0; i < indexes.size(); i++)
+    {
         SD.remove(indexes.at(i));
         Serial.println("Deleted " + indexes.at(i));
     }
 
-    if (SD.exists(INDEX_DIRECTORY)) {
+    if (SD.exists(INDEX_DIRECTORY))
+    {
         SD.rmdir(INDEX_DIRECTORY);
         Serial.println("Removed index dir");
     }

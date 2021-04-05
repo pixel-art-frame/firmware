@@ -22,5 +22,8 @@ private:
     Indexed indexed;
 
     File paginationFile;
-    int page = 1;
+    int page = 0;
+
+    std::vector<String> files;
+    int currentFileIndex = 0;
 };
