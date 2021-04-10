@@ -72,13 +72,13 @@ void handlePlayGif(AsyncWebServerRequest *request)
 
     if (!SD.exists(fileName))
     {
-        request->send(400, "text/plain", "File does not exist");
+        request->send(400, "text/plain", "File not found");
         return;
     }
 
     setGif(fileName);
 
-    request->send(400, "text/plain", "File not found");
+    request->send(200, "text/plain", "OK");
 }
 
 // handles uploads, source: https://github.com/smford/esp32-asyncwebserver-fileupload-example

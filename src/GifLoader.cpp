@@ -56,7 +56,6 @@ void populateGifQueue()
     }
 
     gif_queue.push(loadedFile);
-    Serial.println("Loaded file: " + loadedFile + " queue size: " + String(gif_queue.size()));
 }
 
 void handleGifQueue()
