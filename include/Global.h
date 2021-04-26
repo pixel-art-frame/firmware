@@ -6,6 +6,34 @@
 #include <ESP32-VirtualMatrixPanel-I2S-DMA.h>
 #include "Configuration.hpp"
 #include "MatrixText.hpp"
+#include "Filesystem.hpp"
+
+
+#define PANEL_128_32 true
+#define FM6126A_PANEL false
+
+#if PANEL_128_32
+
+// Config for 2 64x32 panels chained in a stacked config.
+// Change MATRIX_WIDTH to 128 in ESP32-HUB75-MatrixPanel-I2S-DMA.h
+#define PANEL_RES_X 64 // Number of pixels wide of each INDIVIDUAL panel module.
+#define PANEL_RES_Y 32 // Number of pixels tall of each INDIVIDUAL panel module.
+
+#define NUM_ROWS 1 // Number of rows of chained INDIVIDUAL PANELS
+#define NUM_COLS 2 // Number of INDIVIDUAL PANELS per ROW
+
+#else
+
+// Config for 2 64x32 panels chained in a stacked config.
+// Change MATRIX_WIDTH to 128 in ESP32-HUB75-MatrixPanel-I2S-DMA.h
+#define PANEL_RES_X 64 // Number of pixels wide of each INDIVIDUAL panel module.
+#define PANEL_RES_Y 32 // Number of pixels tall of each INDIVIDUAL panel module.
+
+#define NUM_ROWS 2 // Number of rows of chained INDIVIDUAL PANELS
+#define NUM_COLS 1 // Number of INDIVIDUAL PANELS per ROW
+
+#endif
+
 
 #define GIF_DIR "/gifs"
 
@@ -23,12 +51,15 @@ typedef enum {
     INDEXING,
     CONNECT_WIFI, // Connecting to WiFi
     ADJ_BRIGHTNESS, // Adjusting brightness
+    SD_CARD_ERROR,
+    
+    OTA_UPDATE,
 
-    OTA_UPDATE
+    ERROR
 
 } frame_status_t;
 
-extern bool sd_ready;
+extern sd_state_t sd_state;
 
 extern frame_status_t target_state;
 extern unsigned long lastStateChange;

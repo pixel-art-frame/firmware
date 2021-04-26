@@ -14,35 +14,12 @@
 #include "MatrixText.hpp"
 #include "MatrixTime.hpp"
 #include "OTA.h"
-
-#define SCK 33
-#define MISO 32
-#define MOSI 21
-#define CS 22
-
-#define PANEL_128_32 true
-#define FM6126A_PANEL false
+#include "Filesystem.hpp"
 
 #if PANEL_128_32
-
-// Config for 2 64x32 panels chained in a stacked config.
-// Change MATRIX_WIDTH to 128 in ESP32-HUB75-MatrixPanel-I2S-DMA.h
-#define PANEL_RES_X 64 // Number of pixels wide of each INDIVIDUAL panel module.
-#define PANEL_RES_Y 32 // Number of pixels tall of each INDIVIDUAL panel module.
-
-#define NUM_ROWS 1 // Number of rows of chained INDIVIDUAL PANELS
-#define NUM_COLS 2 // Number of INDIVIDUAL PANELS per ROW
-
+#define LOGO_GIF "/logo_128x32.gif"
 #else
-
-// Config for 2 64x32 panels chained in a stacked config.
-// Change MATRIX_WIDTH to 128 in ESP32-HUB75-MatrixPanel-I2S-DMA.h
-#define PANEL_RES_X 64 // Number of pixels wide of each INDIVIDUAL panel module.
-#define PANEL_RES_Y 32 // Number of pixels tall of each INDIVIDUAL panel module.
-
-#define NUM_ROWS 2 // Number of rows of chained INDIVIDUAL PANELS
-#define NUM_COLS 1 // Number of INDIVIDUAL PANELS per ROW
-
+#define LOGO_GIF "/logo_164x64.gif"
 #endif
 
 MatrixPanel_I2S_DMA dma_display;
@@ -50,9 +27,6 @@ VirtualMatrixPanel virtualDisp(dma_display, NUM_ROWS, NUM_COLS, PANEL_RES_X, PAN
 
 // Flag for the OFF state
 bool displayClear = false;
-
-SPIClass sd_spi(HSPI);
-bool sd_ready = false;
 
 frame_status_t frame_state = STARTUP;
 frame_status_t target_state = STARTUP;
@@ -83,7 +57,8 @@ void handleScheduled(void *param)
 
   for (;;)
   {
-    handleGifQueue();
+    if (sd_state == MOUNTED)
+      handleGifQueue();
 
     // Time
     if (config.enableTime)
@@ -97,7 +72,6 @@ void handleScheduled(void *param)
       // Update time2 secs before we should show it
       if ((millis() + 2000) - lastTimeShow > config.timeInterval * 1000)
       {
-        Serial.println("updating time");
         updateTime();
       }
     }
@@ -110,25 +84,15 @@ void setup()
 {
   Serial.begin(115200);
 
-  loadSettings();
-
-  sd_spi.begin(SCK, MISO, MOSI, CS);
-
-  sd_ready = SD.begin(CS, sd_spi);
-
-  if (!sd_ready) {
-    Serial.println("SD failed");
-    ESP.restart();
-    return;
-  }
-
-  Serial.println("SD card ready");
-
-  if (!SPIFFS.begin())
+  Serial.println("Mounting FS");
+  if (!mount_fs())
   {
-    // TODO: Handle this
-    Serial.println("An Error has occurred while mounting SPIFFS");
+    frame_state = target_state = SD_CARD_ERROR;
+    Serial.println("FS MOUNT FAILED");
   }
+
+    loadSettings();
+
 
   dma_display.setPanelBrightness(config.brightness);
   dma_display.setMinRefreshRate(200);
@@ -155,38 +119,23 @@ void setup()
 
 void handleStartup()
 {
-  virtualDisp.clearScreen();
-  virtualDisp.println("Pixel Art Frame");
-  // TODO: Show boot logo
+  ShowGIF(LOGO_GIF, true);
 
-  delay(5000);
-
-  if (frame_state == STARTUP && (frame_state != INDEXING && target_state != INDEXING))
+  if (millis() - lastStateChange > 5000 && frame_state == STARTUP && (frame_state != INDEXING && target_state != INDEXING))
   {
-    Serial.println("Chanting to art after startup, frame state: " + String(frame_state) + " target state: " + String(target_state));
     target_state = PLAYING_ART;
   }
 }
 
-void handleSdError()
-{
-  SD.end();
-  sd_ready = SD.begin(CS, sd_spi);
-
-  if (sd_ready)
-    return;
-
-  println("SD Failed\nInsert SD", dma_display.color565(255, 0, 0), 1, 1, 1, true, true, 1000);
-}
-
 bool targetStateValid()
 {
-  if (target_state == PLAYING_ART && !sd_ready)
+  if (target_state == PLAYING_ART && sd_state != MOUNTED)
   {
     return false;
   }
 
-  if (frame_state == INDEXING && target_state != PLAYING_ART) {
+  if (frame_state == INDEXING && target_state != PLAYING_ART)
+  {
     return false;
   }
 
@@ -195,10 +144,10 @@ bool targetStateValid()
 
 void loop()
 {
-  if (!sd_ready)
+  
+  if (sd_state != MOUNTED)
   {
-    handleSdError();
-    return;
+    target_state = frame_state = SD_CARD_ERROR;
   }
 
   if (!gifPlaying && target_state != frame_state && targetStateValid())
@@ -256,8 +205,21 @@ void loop()
     handleDns();
   }
 
+  if (frame_state == SD_CARD_ERROR)
+  {
+    Serial.println("Handling sd card error");
+    handle_sd_error();
+  }
+
   if (frame_state == OTA_UPDATE)
   {
     handleOTA();
+  }
+
+  if (frame_state == ERROR)
+  {
+    virtualDisp.fillScreen(virtualDisp.color333(0, 0, 0));
+    virtualDisp.setCursor(0, 0);
+    virtualDisp.println("ERROR");
   }
 }

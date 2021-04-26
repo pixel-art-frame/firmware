@@ -199,7 +199,9 @@ void ShowGIF(char *name, bool fromSpiffs = false)
       return;
     }
 
+    Serial.println("Loading GIF");
     LoadGIF(name);
+    Serial.println("Loaded gif!");
     gifPlaying = true;
   }
 
@@ -214,12 +216,12 @@ void ShowGIF(char *name, bool fromSpiffs = false)
 
   if (lastResult == -1)
   {
-    Serial.println("ERROR playing " + String(name));
-    sd_ready = false;
+    sd_state = UNMOUNTED;
   }
 
   if (lastResult == 0)
   {
+    Serial.println("Done!");
     animGif.close();
     gifPlaying = false;
   }

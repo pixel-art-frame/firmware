@@ -17,7 +17,7 @@ int currentGifIndex = 0;
 void nextGif()
 {
     current_gif = getNextGif();
-    
+
     gifStart = millis();
     interruptGif = true;
 }
@@ -30,16 +30,19 @@ void setGif(String gif)
 
 void handleGif()
 {
-    if (queueEmpty()) {
+    if (queueEmpty())
+    {
         return;
-       // ShowGIF(DEFAULT_GIF, true);
+        // ShowGIF(DEFAULT_GIF, true);
     }
 
-    if (current_gif.length() == 0) {
+    if (current_gif.length() == 0)
+    {
         nextGif(); // TODO: Handle empty queue
     }
 
-    while (!current_gif.endsWith(".gif")) {
+    while (!current_gif.endsWith(".gif"))
+    {
         nextGif();
     }
 
@@ -48,7 +51,7 @@ void handleGif()
         nextGif();
     }
 
-    char gif[current_gif.length()+1];
+    char gif[current_gif.length() + 1];
     current_gif.toCharArray(gif, sizeof(gif));
 
     ShowGIF(gif);

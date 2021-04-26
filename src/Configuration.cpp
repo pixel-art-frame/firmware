@@ -27,7 +27,7 @@ void loadSettings()
   {
     Serial.println(F("Failed to read file, using default configuration"));
   }
-
+  Serial.println(configFile.readString());
   config.brightness = doc[BRIGHTNESS_KEY] | 20;
   config.autoPlay = doc[AUTOPLAY_KEY] | true;
   config.ssid = String(doc[SSID_KEY] | "");

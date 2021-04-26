@@ -60,8 +60,10 @@ void populateGifQueue()
 
 void handleGifQueue()
 {
-    if (!sd_ready)
+    if (sd_state != MOUNTED)
+    {
         resetGifLoader();
+    }
 
     if (gif_queue.size() <= (MAX_QUEUED_GIFS - 5))
     {

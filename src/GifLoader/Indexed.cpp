@@ -116,6 +116,11 @@ void Indexed::loadIndexes()
 
     File indexRoot = SD.open(INDEX_DIRECTORY);
 
+    if (!indexRoot)
+    {
+        return;
+    }
+
     for (;;)
     {
         File indexFile = indexRoot.openNextFile();
@@ -133,28 +138,19 @@ void Indexed::loadIndexes()
     indexesLoaded = true;
 }
 
-unsigned long timer = 0;
-
 void Indexed::index()
 {
-    timer = millis();
     target_state = INDEXING;
 
     if (!curDirectory)
     {
-        if (total_files > 0)
-            Serial.println("Start, loading root");
-
         curDirectory = loadRoot();
 
         if (SD.exists(INDEX_DIRECTORY))
         {
-            Serial.println("Index dir already exists, deleting");
-
             SD.rmdir(INDEX_DIRECTORY);
         }
 
-        Serial.println("Creating index directory");
         SD.mkdir(INDEX_DIRECTORY);
 
         indexing = true;
@@ -168,8 +164,6 @@ void Indexed::index()
 
     if (!nextFile)
     {
-        Serial.println("No more files in dir, closing " + String(curDirectory.name()));
-
         nextFile.close();
         curDirectory.close();
 
@@ -215,6 +209,4 @@ void Indexed::index()
     {
         writeIndex();
     }
-
-    Serial.println("    " + nextFileName + " - " + String(millis() - timer) + "ms");
 }

@@ -47,17 +47,13 @@ void connect()
 void connecting()
 {
     if (WiFi.status() == WL_CONNECTED)
-    { // Successfully connected
-        // Set connected flag
+    {
+        target_state = PLAYING_ART;
         return;
     }
 
-    Serial.println("Playing wifi_connecting GIF");
-    ShowGIF(CONN_GIF, true);
-
     if (millis() - connect_start > 10000)
     {
-        // Set AP flag
         createAP();
     }
 }
