@@ -63,6 +63,11 @@ void handleGifQueue()
     if (sd_state != MOUNTED)
     {
         resetGifLoader();
+        return;
+    }
+
+    if (!SD.exists(GIF_DIR)) {
+        sd_state = UNMOUNTED;
     }
 
     if (gif_queue.size() <= (MAX_QUEUED_GIFS - 5))

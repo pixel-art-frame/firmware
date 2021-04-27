@@ -190,6 +190,7 @@ void ShowGIF(char *name, bool fromSpiffs = false)
     if (!fromSpiffs && !SD.exists(name))
     {
       Serial.println("Attempted to show gif but it doesnt exist on SD: path:" + String(name));
+      sd_state = UNMOUNTED;
       return;
     }
 
@@ -199,10 +200,9 @@ void ShowGIF(char *name, bool fromSpiffs = false)
       return;
     }
 
-    Serial.println("Loading GIF");
     LoadGIF(name);
-    Serial.println("Loaded gif!");
     gifPlaying = true;
+    interruptGif = false;
   }
 
   if (interruptGif && gifPlaying)
@@ -211,6 +211,7 @@ void ShowGIF(char *name, bool fromSpiffs = false)
     animGif.close();
     return;
   }
+
 
   lastResult = animGif.playFrame(true, NULL);
 
@@ -221,7 +222,6 @@ void ShowGIF(char *name, bool fromSpiffs = false)
 
   if (lastResult == 0)
   {
-    Serial.println("Done!");
     animGif.close();
     gifPlaying = false;
   }

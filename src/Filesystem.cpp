@@ -24,6 +24,8 @@ sd_state_t sd_state = UNMOUNTED;
 
 SPIClass sd_spi(HSPI);
 
+int sd_error_count = 0;
+
 void unmount_sd()
 {
     if (sd_state != MOUNTED)
@@ -43,7 +45,7 @@ bool mount_sd()
         return true; // Already mounted
     }
 
-     sd_spi.begin(SCK, MISO, MOSI, CS);
+    sd_spi.begin(SCK, MISO, MOSI, CS);
 
     int mount_attempts = 0;
 
@@ -100,14 +102,20 @@ bool handle_sd_error()
 
     if (mount_sd())
     {
+        if (sd_error_count > 3) {
+            ESP.restart();            
+        }
+
+        sd_error_count = 0;
+
         return true;
     }
 
     ShowGIF(INSERT_SD_GIF, true);
+    sd_error_count++;
 
     return false;
 }
-
 
 bool mount_fs()
 {

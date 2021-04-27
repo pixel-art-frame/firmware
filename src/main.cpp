@@ -16,6 +16,8 @@
 #include "OTA.h"
 #include "Filesystem.hpp"
 
+#define VERSION "1.0"
+
 #if PANEL_128_32
 #define LOGO_GIF "/logo_128x32.gif"
 #else
@@ -84,15 +86,12 @@ void setup()
 {
   Serial.begin(115200);
 
-  Serial.println("Mounting FS");
   if (!mount_fs())
   {
     frame_state = target_state = SD_CARD_ERROR;
-    Serial.println("FS MOUNT FAILED");
   }
 
-    loadSettings();
-
+  loadSettings();
 
   dma_display.setPanelBrightness(config.brightness);
   dma_display.setMinRefreshRate(200);
@@ -144,7 +143,6 @@ bool targetStateValid()
 
 void loop()
 {
-  
   if (sd_state != MOUNTED)
   {
     target_state = frame_state = SD_CARD_ERROR;
