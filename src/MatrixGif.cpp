@@ -212,15 +212,12 @@ void ShowGIF(char *name, bool fromSpiffs = false)
     return;
   }
 
-
   lastResult = animGif.playFrame(true, NULL);
 
-  if (lastResult == -1)
-  {
-    sd_state = UNMOUNTED;
-  }
+  // Some GIFS return -1 even when there are no errors?
+  // TODO: Find out why
 
-  if (lastResult == 0)
+  if (lastResult < 1  && allowNextGif)
   {
     animGif.close();
     gifPlaying = false;

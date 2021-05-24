@@ -8,6 +8,7 @@
 #define DEFAULT_GIF "boot.gif"
 
 bool autoPlay = true;
+bool allowNextGif = true;
 
 unsigned long gifStart = 0;
 int minPlaytime = 4000; // TODO: Make configurable
@@ -30,15 +31,16 @@ void setGif(String gif)
 
 void handleGif()
 {
-    if (queueEmpty())
+    if (queueEmpty() && !gifPlaying)
     {
+        Serial.println("Queue empty");
+        ShowGIF(LOGO_GIF, true);
         return;
-        // ShowGIF(DEFAULT_GIF, true);
     }
 
     if (current_gif.length() == 0)
     {
-        nextGif(); // TODO: Handle empty queue
+        nextGif();
     }
 
     while (!current_gif.endsWith(".gif"))
@@ -46,7 +48,8 @@ void handleGif()
         nextGif();
     }
 
-    if (!gifPlaying && (autoPlay && millis() - gifStart > minPlaytime))
+    allowNextGif = autoPlay && millis() - gifStart > minPlaytime;
+    if (!gifPlaying && allowNextGif)
     {
         nextGif();
     }

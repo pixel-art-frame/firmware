@@ -2,8 +2,6 @@
 
 void ConfigApi::handleWifiConfig(AsyncWebServerRequest *request)
 {
-    Serial.println("Wifi config");
-
     if (!request->hasParam("ssid") || !request->hasParam("pass"))
     {
         request->send(400, "text/plain", "Missing parameter(s): ssid, value");

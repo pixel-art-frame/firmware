@@ -51,7 +51,7 @@ void handleAutoplay(AsyncWebServerRequest *request)
 {
     if (!request->hasParam("value"))
     {
-        request->send(400, "text/plain", "Missing parameter: state");
+        request->send(400, "text/plain", "Missing parameter: value");
         return;
     }
 
@@ -318,6 +318,10 @@ void configureWebServer()
     server->on("/text", HTTP_POST, handleTextRequest);
 
     server->on("/state", HTTP_GET, [](AsyncWebServerRequest *request) {
+        request->send(200, "text/plain", String(target_state));
+    });
+
+    server->on("/state", HTTP_POST, [](AsyncWebServerRequest *request) {
         if (!request->hasParam("state"))
         {
             request->send(400, "text/plain", "Missing param: state");
@@ -336,10 +340,6 @@ void configureWebServer()
 
         target_state = (frame_status_t)state;
         interruptGif = true;
-    });
-
-    server->on("/test", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(200, "text/plain", "Core: " + String(xPortGetCoreID()));
     });
 }
 

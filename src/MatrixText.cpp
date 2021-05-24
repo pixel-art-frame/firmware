@@ -19,7 +19,6 @@ void handleText()
 {
     if ((!scrolling && millis() - show_text_start > text_delay) || scroll_finished)
     {
-        Serial.println("Text finished, returinig to art");
         target_state = PLAYING_ART;
     }
 
@@ -31,14 +30,12 @@ void handleText()
 
 void showText(Text t)
 {
-    Serial.println("Showing text");
     if (t.scroll)
     {
         scroll(t.text, t.speed, t.color, t.size, t.y);
         return;
     }
 
-    Serial.println("println " + t.text);
     println(t.text, t.color, t.size, t.x, t.y, t.wrap, t.clearScreen, t.delay);
 }
 
@@ -59,6 +56,8 @@ void println(String text, uint16_t color = DEFAULT_TEXT_COLOR, uint8_t size = 1,
     virtualDisp.setTextColor(color);
     virtualDisp.setTextSize(size);
     virtualDisp.println(text);
+
+    Serial.println("Text delay: " + String(d));
 
     text_delay = d;
 }

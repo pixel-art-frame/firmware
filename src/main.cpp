@@ -18,11 +18,9 @@
 
 #define VERSION "1.0"
 
-#if PANEL_128_32
-#define LOGO_GIF "/logo_128x32.gif"
-#else
-#define LOGO_GIF "/logo_164x64.gif"
-#endif
+#define BULB_GIF "/bulb.gif"
+
+#define E_PIN_DEFAULT   18
 
 MatrixPanel_I2S_DMA dma_display;
 VirtualMatrixPanel virtualDisp(dma_display, NUM_ROWS, NUM_COLS, PANEL_RES_X, PANEL_RES_Y, true);
@@ -41,10 +39,17 @@ TaskHandle_t scheduled_task;
 
 void handleBrightness()
 {
+  if (!displayClear)
+  {
+    virtualDisp.clearScreen();
+    displayClear = true;
+  }
+
   ShowGIF("/bulb.gif", true);
 
-  if (millis() - lastStateChange > 1000)
+  if (millis() - lastStateChange > 2000)
   {
+    displayClear = false;
     target_state = PLAYING_ART;
   }
 }
@@ -82,6 +87,29 @@ void handleScheduled(void *param)
   }
 }
 
+// TODO: Write proper display test
+void displayTest()
+{
+  dma_display.clearScreen();
+  dma_display.setCursor(0,0);
+  dma_display.setTextColor(dma_display.color565(255, 255, 255));
+  dma_display.setTextSize(1);
+  dma_display.setTextWrap(true);
+  dma_display.println("DISPLAY TEST");
+
+  delay(1000);
+  dma_display.clearScreen();
+
+  for (int x = 0; x < MATRIX_WIDTH; x++) {
+    for (int y = 0; y < MATRIX_HEIGHT; y++) {
+        dma_display.drawPixel(x, y, dma_display.color565(255, 0, 0));
+        Serial.println("Drawing X:" + String(x) + " Y:" + String(y));
+        delay(10);
+    }
+  }
+
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -99,7 +127,7 @@ void setup()
 #if FM6126A_PANEL
   dma_display.begin(R1_PIN_DEFAULT, G1_PIN_DEFAULT, B1_PIN_DEFAULT, R2_PIN_DEFAULT, G2_PIN_DEFAULT, B2_PIN_DEFAULT, A_PIN_DEFAULT, B_PIN_DEFAULT, C_PIN_DEFAULT, D_PIN_DEFAULT, E_PIN_DEFAULT, LAT_PIN_DEFAULT, OE_PIN_DEFAULT, CLK_PIN_DEFAULT, FM6126A);
 #else
-  dma_display.begin();
+  dma_display.begin(R1_PIN_DEFAULT, G1_PIN_DEFAULT, B1_PIN_DEFAULT, R2_PIN_DEFAULT, G2_PIN_DEFAULT, B2_PIN_DEFAULT, A_PIN_DEFAULT, B_PIN_DEFAULT, C_PIN_DEFAULT, D_PIN_DEFAULT, E_PIN_DEFAULT, LAT_PIN_DEFAULT, OE_PIN_DEFAULT, CLK_PIN_DEFAULT);
 #endif
 
   virtualDisp.fillScreen(dma_display.color565(0, 0, 0));
@@ -145,6 +173,7 @@ void loop()
 {
   if (sd_state != MOUNTED)
   {
+    Serial.println("SD state not mounted in loop()");
     target_state = frame_state = SD_CARD_ERROR;
   }
 

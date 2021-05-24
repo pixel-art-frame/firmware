@@ -2,17 +2,13 @@
 
 void FilesApi::listFiles(AsyncWebServerRequest *request)
 {
-    Serial.print("list files ");
     if (config.loadStrategy == SEQUENTIAL)
     {
-        Serial.println("sequential");
         listFilesSequential(request);
     }
 
     if (config.loadStrategy == INDEXED)
     {
-        Serial.println("indexed");
-
         listFilesIndexed(request);
     }
 }

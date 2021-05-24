@@ -38,6 +38,7 @@ void createAP()
 
 void connect()
 {
+    WiFi.setHostname(String("Pixel Art Frame").c_str());
     WiFi.begin(config.ssid.c_str(), config.pass.c_str());
 
     target_state = CONNECT_WIFI;

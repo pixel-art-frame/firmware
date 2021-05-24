@@ -68,5 +68,5 @@ void handleTime()
     String date = dayStr + "/" + monthStr;
 
     println(time, virtualDisp.color565(0, 255, 0), 2, TIME_X, TIME_Y, false, true, 0);
-    println(date, virtualDisp.color565(0, 0, 255), 2, DATE_X, DATE_Y, false, false, config.timeShowSeconds * 1000);
+    println(date, virtualDisp.color565(0, 0, 255), 2, DATE_X, DATE_Y, false, false, config.timeShowSeconds);
 }
